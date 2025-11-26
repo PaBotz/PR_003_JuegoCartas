@@ -1,11 +1,11 @@
 using UnityEngine;
 
+
 public class scr_Card : MonoBehaviour
 {
 
     private GameObject Player;
     public scr_PlayerMovements my_scrPlayer;
-
     
     [SerializeField] GameObject SpriteCard;
 
@@ -14,13 +14,12 @@ public class scr_Card : MonoBehaviour
 
     void Start()
     {
-
         Player = GameObject.Find("Player");
         my_scrPlayer = Player.GetComponent<scr_PlayerMovements>();
         card_Active = false;
         SpriteCard.SetActive(false);
 
-
+      
 
     }
 
@@ -35,6 +34,8 @@ public class scr_Card : MonoBehaviour
 
     }
 
+    
+
     private void OnTriggerEnter2D(Collider2D collision)
     {
         if (collision.gameObject.CompareTag("Player"))
@@ -45,5 +46,5 @@ public class scr_Card : MonoBehaviour
     }
 
 
-
 }
+
