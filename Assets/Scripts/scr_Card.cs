@@ -12,6 +12,11 @@ public class scr_Card : MonoBehaviour
     [Header("PRUEBA")]
     public bool card_Active;
 
+
+ 
+
+
+
     void Start()
     {
         Player = GameObject.Find("Player");
@@ -19,7 +24,8 @@ public class scr_Card : MonoBehaviour
         card_Active = false;
         SpriteCard.SetActive(false);
 
-      
+    
+
 
     }
 
@@ -28,13 +34,16 @@ public class scr_Card : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.U) && card_Active == true )
         {
+            Debug.Log("Estoy active");
             SpriteCard.SetActive(true);
         }
      
 
     }
 
-    
+  
+   
+
 
     private void OnTriggerEnter2D(Collider2D collision)
     {
@@ -42,6 +51,14 @@ public class scr_Card : MonoBehaviour
         {
             Debug.Log("Collision 2D");
             card_Active = true;
+        }
+    }
+    private void OnTriggerExit2D(Collider2D collision)
+    {
+        if (collision.gameObject.CompareTag("Player"))
+        {
+            Debug.Log("Collision 2D");
+            card_Active = false;
         }
     }
 
