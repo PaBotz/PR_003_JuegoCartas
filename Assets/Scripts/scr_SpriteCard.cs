@@ -5,22 +5,25 @@ public class scr_SpriteCard : MonoBehaviour
 {
     //Sprite aleatotio
     [Header("Sprites disponibles")]
-    public List<Sprite> sprites;
+    
    //public List<GameObject> pares_List;
     public string sortingLayerName = "Front_Card";
     public int orderInLayer = 1;
 
     private SpriteRenderer sr;
+
+    public scr_Generator myGenerator;
     void Awake()
     {
         sr = GetComponent<SpriteRenderer>();
+        
     }
 
 
     void Start()
     {
         //Sprite aleatorios
-        //SetRandomSprite();
+        SetRandomSprite();
         //ApplyRenderOptions();
 
     }
@@ -32,9 +35,11 @@ public class scr_SpriteCard : MonoBehaviour
             Debug.LogWarning("No hay sprites asignados en " + gameObject.name);
             return;
         }*/
-
-        /*int randomIndex = Random.Range(0, sprites.Length); //Coloca un numero aleatorio de la cantidad de sprites que tengamos
-        sr.sprite = sprites.splice(randomIndex,1)[0];*/ //Lo setea
+        
+        int randomIndex = Random.Range(0, myGenerator.mazo.Count); //Coloca un numero aleatorio de la cantidad de sprites que tengamos
+        sr.sprite = myGenerator.mazo[randomIndex];
+        myGenerator.mazo.RemoveAt(randomIndex);
+            //.splice(randomIndex,1)[0];//Lo setea
         //Buscar los objetos con el index actual en la escena
         //Si hay 2 objetos que ya lo poseen que vuelva a hacer el randomIndex 
         

@@ -317,11 +317,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 35fe6aecef0d841308f1aaae4cdde0e0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::scr_Generator
-  mapSize: {x: 4, y: 2}
+  mapSize: {x: 6, y: 6}
   tile: {fileID: 747740110}
   spacingX: 3
   spacingY: 4
-  sprites:
+  sprites_Disponibles:
   - {fileID: -8770246151223524133, guid: 47622ac893af2a14d9088d184a098520, type: 3}
   - {fileID: 3266960263847023872, guid: e2a36a457cd67734896cb11451c39a0b, type: 3}
   - {fileID: -2443198628030305771, guid: 4f40999e9b7c80b41aa648fcb060abbe, type: 3}
@@ -736,13 +736,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1f460fa1cbb6a6048abd2dd6b44c0112, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::scr_SpriteCard
-  sprites:
-  - {fileID: -8770246151223524133, guid: 47622ac893af2a14d9088d184a098520, type: 3}
-  - {fileID: 3266960263847023872, guid: e2a36a457cd67734896cb11451c39a0b, type: 3}
-  - {fileID: -2443198628030305771, guid: 4f40999e9b7c80b41aa648fcb060abbe, type: 3}
-  - {fileID: -8234179042789887366, guid: e1c1d1834da890c42831b2cd429fddab, type: 3}
   sortingLayerName: Front_Card
   orderInLayer: 1
+  myGenerator: {fileID: 448034110}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

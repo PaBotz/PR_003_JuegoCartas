@@ -24,9 +24,6 @@ public class scr_Card : MonoBehaviour
         card_Active = false;
         SpriteCard.SetActive(false);
 
-    
-
-
     }
 
 
@@ -42,8 +39,6 @@ public class scr_Card : MonoBehaviour
     }
 
   
-   
-
 
     private void OnTriggerEnter2D(Collider2D collision)
     {
