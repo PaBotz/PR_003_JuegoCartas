@@ -5,10 +5,13 @@ using System.Collections.Generic;
 public class scr_Generator : MonoBehaviour
 {
     public Transform[,] tilesTransform;
-    public Sprite[] tilesSprite; //La carta por atras
     public Vector2 mapSize;
     public GameObject tile;
     public float spacingX,spacingY;
+
+    public List<Sprite> sprites;
+
+    public List<Sprite> mazo;
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
@@ -16,16 +19,10 @@ public class scr_Generator : MonoBehaviour
         //Matriz/array.
         tilesTransform = new Transform[(int)mapSize.x, (int)mapSize.y];
         generatorMap();
+        gestionDeLista();
         
     }
 
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
-
-  
     private void generatorMap()
     {
         for (int x = 0; x < mapSize.x; x++)
@@ -39,6 +36,16 @@ public class scr_Generator : MonoBehaviour
         }
     }
 
+    private void gestionDeLista()
+    {
+        for(int i=0;i<sprites.Count;i++)
+        {
+            var carta = sprites[i];
+            mazo.Add(carta);
+            mazo.Add(carta); 
+
+        }
+    }
   
 
 

@@ -317,15 +317,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 35fe6aecef0d841308f1aaae4cdde0e0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::scr_Generator
-  tilesSprite:
-  - {fileID: 10901, guid: 0000000000000000f000000000000000, type: 0}
-  - {fileID: 10911, guid: 0000000000000000f000000000000000, type: 0}
-  - {fileID: 10913, guid: 0000000000000000f000000000000000, type: 0}
-  - {fileID: 10915, guid: 0000000000000000f000000000000000, type: 0}
-  mapSize: {x: 5, y: 5}
+  mapSize: {x: 4, y: 2}
   tile: {fileID: 747740110}
   spacingX: 3
   spacingY: 4
+  sprites:
+  - {fileID: -8770246151223524133, guid: 47622ac893af2a14d9088d184a098520, type: 3}
+  - {fileID: 3266960263847023872, guid: e2a36a457cd67734896cb11451c39a0b, type: 3}
+  - {fileID: -2443198628030305771, guid: 4f40999e9b7c80b41aa648fcb060abbe, type: 3}
+  - {fileID: -8234179042789887366, guid: e1c1d1834da890c42831b2cd429fddab, type: 3}
+  mazo: []
 --- !u!4 &448034111
 Transform:
   m_ObjectHideFlags: 0
@@ -649,7 +650,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!212 &1020769841
 SpriteRenderer:
   m_ObjectHideFlags: 0
@@ -697,12 +698,12 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 1
-  m_Sprite: {fileID: -8234179042789887366, guid: e1c1d1834da890c42831b2cd429fddab, type: 3}
+  m_Sprite: {fileID: 10907, guid: 0000000000000000f000000000000000, type: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
-  m_Size: {x: 1, y: 1}
+  m_Size: {x: 0.42, y: 0.68}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
