@@ -109,8 +109,8 @@ public class scr_MatchManager : MonoBehaviour
              }
             */
 
-            anim_01.SetTrigger("card_Match");
-            anim_02.SetTrigger("card_Match");
+            anim_01.SetTrigger("Match_Trigger");
+            anim_02.SetTrigger("Match_Trigger");
 
 
         }
@@ -131,6 +131,8 @@ public class scr_MatchManager : MonoBehaviour
             hijo_01.SetActive(false);
             hijo_02.SetActive(false);
 
+            hijo_01.transform.parent.GetComponent<scr_Card>().ResetCardActive();
+            hijo_02.transform.parent.GetComponent<scr_Card>().ResetCardActive();
 
             /*GameObject cartaPadre_01 = cartaEnEspera_01.transform.parent.gameObject; //Con esta linea le estamos pidiendo que nos de el gameobject del padre del objeto que tenga este script
             GameObject cartaPadre_02 = cartaEnEspera_02.transform.parent.gameObject; //Lo hacemos con la intencion de ingresar a su animacion para desaparcer los pares

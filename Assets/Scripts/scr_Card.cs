@@ -70,6 +70,11 @@ public class scr_Card : MonoBehaviour
         myscr_MatchManager.EliminarCartasMatch();
     }
 
+    public void ResetCardActive()
+    {
+    card_Active = false;
+    }
+
 
     private void OnTriggerEnter2D(Collider2D collision)
     {
