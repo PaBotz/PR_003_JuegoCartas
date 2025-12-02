@@ -7,15 +7,15 @@ using UnityEngine;
 
 public class scr_MatchManager : MonoBehaviour
 {
-    //public List<Sprite> myList_spriteCards;//Lista que contendrá solo los sprites 
-    public List<GameObject> cartasHijoActivas_List; //Lista que contendrá las cartas front activa. Si alguna se desactiva la sacaremos de la lista
+    //public List<Sprite> myList_spriteCards;//Lista que contendrï¿½ solo los sprites 
+    public List<GameObject> cartasHijoActivas_List; //Lista que contendrï¿½ las cartas front activa. Si alguna se desactiva la sacaremos de la lista
     public List<scr_SpriteCard> scriptsCartas_List; //lo ponemos con los scripts para saltarnos el meter todo el tiempo el "GetComponent<scr_SpriteCard>()", osea, nos saltamos ese paso.
   
     public int paresEncontrados;
 
 
     //AUN  NO LO USO
-    [Header("Configuración de Tiempos")]
+    [Header("Configuracion de Tiempos")]
     public float tiempoParaVerCartas = 1.5f;
     private bool estaComparando = false; //Sirve como interruptor para saber si ya hay dos cartas en juego, si las hay, se empieza a comparar, por lo que ya no se pueden activar nuevas cartas
     private scr_SpriteCard cartaEnEspera_01, cartaEnEspera_02; //Referencias de las cartas que estan esperando
@@ -32,7 +32,7 @@ public class scr_MatchManager : MonoBehaviour
     {
         if (estaComparando || cartasHijoActivas_List.Count >= 2)
         {
-            Debug.Log("No se puede activar carta: límite alcanzado o comparando");
+            Debug.Log("No se puede activar carta: limite alcanzado o comparando");
             return false;
         }
         return true;
@@ -43,26 +43,26 @@ public class scr_MatchManager : MonoBehaviour
     {
         /*  if (estaComparando)
           {
-              Debug.LogWarning("Ya hay una comparación en proceso, espera...");
+              Debug.LogWarning("Ya hay una comparacion en proceso, espera...");
               return;
           }
 
-          if (cartasHijoActivas_List.Count >= 2) //Con la funcion "PuedeActivarCarta()"  tanto este if como el anterior deberían de quedar obsoletos, pues al no poderse activar la carta hijo, no debería agregarse nada a ninguna lista.
+          if (cartasHijoActivas_List.Count >= 2) //Con la funcion "PuedeActivarCarta()"  tanto este if como el anterior deberï¿½an de quedar obsoletos, pues al no poderse activar la carta hijo, no deberï¿½a agregarse nada a ninguna lista.
           {
-              Debug.LogWarning("Ya hay 2 cartas activas, no se pueden activar más");
+              Debug.LogWarning("Ya hay 2 cartas activas, no se pueden activar mas");
               return;
           }
         */
 
         Debug.Log("el scriptsCartas_List.Count: " + scriptsCartas_List.Count);
 
-        // Añadir a las listas
+        // Aï¿½adir a las listas
         cartasHijoActivas_List.Add(spriteCard_Active);
         scriptsCartas_List.Add(spriteCard_Active.GetComponent<scr_SpriteCard>());
 
         Debug.Log("Carta activada. Total activas: " + cartasHijoActivas_List.Count);
        
-        // Si hay 2 o más cartas activadas, comparar
+        // Si hay 2 o mas cartas activadas, comparar
         if (cartasHijoActivas_List.Count >= 2)
         {
             StartCoroutine(CompararCartas());
@@ -78,19 +78,18 @@ public class scr_MatchManager : MonoBehaviour
 
         Sprite sprite_01 = scriptsCartas_List[0].ObtenerSprite(); //Referenciamos en una variable el sprite de las dos cartas abiertas.
         Sprite sprite_02 = scriptsCartas_List[1].ObtenerSprite(); //A diferenciade la otra funcion de bucle doble donde teniamos todaas las cartas activas y habia que recorrerlas y compararlas todas.
-                                                                  //aqui solo tendremos en la lista las cartas activas, las cuales solo podrán ser 2.
+                                                                  //aqui solo tendremos en la lista las cartas activas, las cuales solo podrï¿½n ser 2.
 
-        Debug.Log($"Comparando: {sprite_01.name} con {sprite_02.name}"); // $ = Interpolacion de cadenas. Es lo mismo que poner "Debug.Log("Comparando: " + sprite1.name + " con " + sprite2.name);"
-                                                                         // Pero es más limpio a la vista, osea mas facil de leer
+        //Debug.Log($"Comparando: {sprite_01.name} con {sprite_02.name}"); // $ = Interpolacion de cadenas. Es lo mismo que poner "Debug.Log("Comparando: " + sprite1.name + " con " + sprite2.name);"
+                                                                         // Pero es mï¿½s limpio a la vista, osea mas facil de leer
+        Debug.Log("Comparando: " + sprite_01 + " con " + sprite_02);
 
         if (sprite_01 == sprite_02)
         {
-            Debug.Log("¡MATCH ENCONTRADO!");
+            Debug.Log("MATCH ENCONTRADO!");
 
             cartaEnEspera_01 = scriptsCartas_List[0];//Referenciamos los scripts de las cartas que tenemos en la lista
             cartaEnEspera_02 = scriptsCartas_List[1];
-
-
 
             GameObject cartaPadre_01 = cartaEnEspera_01.transform.parent.gameObject; //Con esta linea le estamos pidiendo que nos de el gameobject del padre del objeto que tenga este script
             GameObject cartaPadre_02 = cartaEnEspera_02.transform.parent.gameObject; //Lo hacemos con la intencion de ingresar a su animacion para desaparcer los pares
@@ -100,13 +99,13 @@ public class scr_MatchManager : MonoBehaviour
             /* if (anim1 != null)
              {
                  anim1.SetTrigger("Match");
-                 Debug.Log("Animación activada en carta 1");
+                 Debug.Log("Animaciï¿½n activada en carta 1");
              }
 
              if (anim2 != null)
              {
                  anim2.SetTrigger("Match");
-                 Debug.Log("Animación activada en carta 2");
+                 Debug.Log("Animaciï¿½n activada en carta 2");
              }
             */
 
@@ -122,7 +121,7 @@ public class scr_MatchManager : MonoBehaviour
             Debug.Log("Ocultando cartas...");
 
             scr_SpriteCard script_01 = scriptsCartas_List[0];
-            scr_SpriteCard script_02 = scriptsCartas_List[1];  //Preguntar a chatGPT ¿No seria mejor hacer esto con las referencias que ya tenemos:  cartaEnEspera_01 y 02
+            scr_SpriteCard script_02 = scriptsCartas_List[1];  //Preguntar a chatGPT ï¿½No seria mejor hacer esto con las referencias que ya tenemos:  cartaEnEspera_01 y 02
             GameObject hijo_01 = cartasHijoActivas_List[0];
             GameObject hijo_02 = cartasHijoActivas_List[1];
 
@@ -132,10 +131,24 @@ public class scr_MatchManager : MonoBehaviour
             hijo_01.SetActive(false);
             hijo_02.SetActive(false);
 
+
+            /*GameObject cartaPadre_01 = cartaEnEspera_01.transform.parent.gameObject; //Con esta linea le estamos pidiendo que nos de el gameobject del padre del objeto que tenga este script
+            GameObject cartaPadre_02 = cartaEnEspera_02.transform.parent.gameObject; //Lo hacemos con la intencion de ingresar a su animacion para desaparcer los pares
+
+            cartaPadre_01.GetComponent<scr_Card>().card_Active = false;
+            cartaPadre_02.GetComponent<scr_Card>().card_Active = false;
+
+            Debug.Log("CartaPadre01: " + cartaPadre_01.GetComponent<scr_Card>().card_Active);
+            Debug.Log("CartaPadre02: " + cartaPadre_02.GetComponent<scr_Card>().card_Active); 
+            */
+
             estaComparando = false;
-            Debug.Log("Comparación terminada. Listas limpiadas.");
+            Debug.Log("Comparacion terminada. Listas limpiadas.");
+
+            
         }
-        }
+    }
+    
     public void EliminarCartasMatch()
     {
         Debug.Log("Animation Event: Eliminando cartas con match");
@@ -153,7 +166,7 @@ public class scr_MatchManager : MonoBehaviour
         cartaEnEspera_02 = null;
 
         estaComparando = false;
-        Debug.Log("Eliminación completada. Sistema listo para nuevas cartas.");
+        Debug.Log("Eliminaciï¿½n completada. Sistema listo para nuevas cartas.");
     }
 
     #region ReiniciarContado
@@ -175,15 +188,15 @@ public class scr_MatchManager : MonoBehaviour
 
          Debug.Log("Comprobando matches...");
 
-         // Comparar todas las cartas activadas entre sí
+         // Comparar todas las cartas activadas entre sï¿½
          for (int i = 0; i < scriptsCartas_List.Count; i++)
          {
-             for (int j = i + 1; j < scriptsCartas_List.Count; j++)//Este doble for sirve para cpmparar todos los objetos dentro de la lista por si mismos, coge i y lo compara por todos los j´s
+             for (int j = i + 1; j < scriptsCartas_List.Count; j++)//Este doble for sirve para cpmparar todos los objetos dentro de la lista por si mismos, coge i y lo compara por todos los jï¿½s
              {
 
                  if (scriptsCartas_List[i].ObtenerSprite() == scriptsCartas_List[j].ObtenerSprite()) //Compara los sprites de cada carta entre ellos
                  {
-                     Debug.Log("¡MATCH ENCONTRADO!");
+                     Debug.Log("ï¿½MATCH ENCONTRADO!");
 
                      //Desactivacion
                      scr_SpriteCard script_01 = scriptsCartas_List[i];
@@ -202,13 +215,13 @@ public class scr_MatchManager : MonoBehaviour
                      paresEncontrados++;
                      Debug.Log("Pares encontrados: " + paresEncontrados);
 
-                     // Volver a comprobar por si hay más matches
+                     // Volver a comprobar por si hay mï¿½s matches
                      if (cartasHijoActivas_List.Count >= 2)
                      {
                          ComprobarMatches();
                      }
 
-                     return; // Salir después de encontrar un match
+                     return; // Salir despuï¿½s de encontrar un match
                  }
 
              }

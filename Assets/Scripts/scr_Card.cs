@@ -12,7 +12,6 @@ public class scr_Card : MonoBehaviour
     [SerializeField] private GameObject myMatchManager;
     [SerializeField] private scr_MatchManager myscr_MatchManager;
 
-
     [Header("PRUEBA")]
     public bool card_Collision, card_Active;
 
@@ -34,6 +33,9 @@ public class scr_Card : MonoBehaviour
     void Update()
     {
         cardActive_Funcion();
+
+        
+        
     }
 
 
@@ -50,15 +52,17 @@ public class scr_Card : MonoBehaviour
             Debug.Log("Estoy active");
             SpriteCard.SetActive(true);
             card_Active = true;
-            //myscr_SpriteCard.CartaActivada();
+            myscr_SpriteCard.CartaActivada();
 
         }
-        else if (Input.GetKeyDown(KeyCode.U) && card_Collision && card_Active)
+       
+
+      /*  else if (Input.GetKeyDown(KeyCode.U) && card_Collision && card_Active)
         {
             Debug.Log("Estoy desactive");
             SpriteCard.SetActive(false);
             card_Active = false;
-        }
+        } */
     }
 
     void eliminarMatchCartas_MatchManager()
@@ -73,6 +77,7 @@ public class scr_Card : MonoBehaviour
         {
             Debug.Log("Collision 2D");
             card_Collision = true;
+            
         }
     }
     private void OnTriggerExit2D(Collider2D collision)
