@@ -5,56 +5,63 @@ public class scr_SpriteCard : MonoBehaviour
 {
     //Sprite aleatotio
     [Header("Sprites disponibles")]
-    
-   //public List<GameObject> pares_List;
+
+    //public List<GameObject> pares_List;
     public string sortingLayerName = "Front_Card";
     public int orderInLayer = 1;
 
     private SpriteRenderer sr;
+    private Sprite sprite_Propio;
 
     public scr_Generator myGenerator;
+    public scr_MatchManager myMatchManager;
+
+    public GameObject cartaPadre;
+
     void Awake()
     {
         sr = GetComponent<SpriteRenderer>();
-        
+        myGenerator = FindFirstObjectByType<scr_Generator>();
+        myMatchManager = FindFirstObjectByType<scr_MatchManager>();
     }
 
 
-    void Start()
+    void Start() //Se activa solo una vez en toda la vida del gameobject al igual que el awake.
     {
-        //Sprite aleatorios
         SetRandomSprite();
-        //ApplyRenderOptions();
+        CartaActivada();
 
     }
+    private void OnEnable() //Este se activa cada vez que (valga la redundancia) se activa el gameobject
+    {
+
+    }
+
 
     void SetRandomSprite()
     {
-        /*if (sprites == null || sprites.Length == 0)
-        {
-            Debug.LogWarning("No hay sprites asignados en " + gameObject.name);
-            return;
-        }*/
-        
         int randomIndex = Random.Range(0, myGenerator.mazo.Count); //Coloca un numero aleatorio de la cantidad de sprites que tengamos
         sr.sprite = myGenerator.mazo[randomIndex];
+        sprite_Propio = sr.sprite;
         myGenerator.mazo.RemoveAt(randomIndex);
-            //.splice(randomIndex,1)[0];//Lo setea
-        //Buscar los objetos con el index actual en la escena
-        //Si hay 2 objetos que ya lo poseen que vuelva a hacer el randomIndex 
-        
+
     }
-    
 
-    /*void ApplyRenderOptions()
+    public Sprite ObtenerSprite()
     {
-        sr.sortingLayerName = sortingLayerName;
-        sr.sortingOrder = orderInLayer;
-    }*/
+        return sprite_Propio;
+    }
 
-
-    void Update()
+    public void DesactivarPadre()
     {
-        
+        cartaPadre.SetActive(false);
+    }
+
+    public void CartaActivada()
+    {
+
+        myMatchManager.RegistrarCartaActivada(this.gameObject);
+
+
     }
 }
