@@ -29,12 +29,17 @@ public class scr_SpriteCard : MonoBehaviour
     void Start() //Se activa solo una vez en toda la vida del gameobject al igual que el awake.
     {
         SetRandomSprite();
-        CartaActivada();
+        
 
+    }
+
+    private void Update()
+    {
+       
     }
     private void OnEnable() //Este se activa cada vez que (valga la redundancia) se activa el gameobject
     {
-
+        CartaActivada();
     }
 
 

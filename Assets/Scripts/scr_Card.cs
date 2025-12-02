@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 
 public class scr_Card : MonoBehaviour
@@ -7,8 +7,11 @@ public class scr_Card : MonoBehaviour
     private GameObject Player;
     public scr_PlayerMovements my_scrPlayer;
     
-    [SerializeField] GameObject SpriteCard;
-    public scr_SpriteCard myscr_SpriteCard;
+    [SerializeField] private GameObject SpriteCard;
+    [SerializeField] private scr_SpriteCard myscr_SpriteCard;
+    [SerializeField] private GameObject myMatchManager;
+    [SerializeField] private scr_MatchManager myscr_MatchManager;
+
 
     [Header("PRUEBA")]
     public bool card_Collision, card_Active;
@@ -17,8 +20,10 @@ public class scr_Card : MonoBehaviour
     void Start()
     {
         Player = GameObject.Find("Player");
+        myMatchManager= GameObject.Find("MatchManager");
         my_scrPlayer = Player.GetComponent<scr_PlayerMovements>();
         myscr_SpriteCard = SpriteCard.GetComponent<scr_SpriteCard>();
+        myscr_MatchManager = myMatchManager.GetComponent<scr_MatchManager>();
         card_Collision = false;
         SpriteCard.SetActive(false);
         card_Active = false;
@@ -34,8 +39,14 @@ public class scr_Card : MonoBehaviour
 
     private void cardActive_Funcion()
     {
+        
         if (Input.GetKeyDown(KeyCode.U) && card_Collision && !card_Active)
         {
+            if (!myscr_MatchManager.PuedeActivarCarta())
+            {
+                Debug.Log("No se puede activar más cartas en este momento");
+                return; // Bloquear la activación
+            }
             Debug.Log("Estoy active");
             SpriteCard.SetActive(true);
             card_Active = true;
@@ -48,6 +59,11 @@ public class scr_Card : MonoBehaviour
             SpriteCard.SetActive(false);
             card_Active = false;
         }
+    }
+
+    void eliminarMatchCartas_MatchManager()
+    {
+        myscr_MatchManager.EliminarCartasMatch();
     }
 
 
