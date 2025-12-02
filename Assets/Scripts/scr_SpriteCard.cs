@@ -12,6 +12,7 @@ public class scr_SpriteCard : MonoBehaviour
 
     private SpriteRenderer sr;
     private Sprite sprite_Propio;
+    private bool spriteYaAsignado = false;
 
     public scr_Generator myGenerator;
     public scr_MatchManager myMatchManager;
@@ -26,13 +27,6 @@ public class scr_SpriteCard : MonoBehaviour
     }
 
 
-    void Start() //Se activa solo una vez en toda la vida del gameobject al igual que el awake.
-    {
-        SetRandomSprite();
-        //CartaActivada();
-
-    }
-
     private void Update()
     {
        
@@ -45,6 +39,7 @@ public class scr_SpriteCard : MonoBehaviour
         sr.sprite = myGenerator.mazo[randomIndex];
         sprite_Propio = sr.sprite;
         myGenerator.mazo.RemoveAt(randomIndex);
+        spriteYaAsignado = true;
 
     }
 
@@ -60,6 +55,10 @@ public class scr_SpriteCard : MonoBehaviour
 
     public void CartaActivada()
     {
+        if (!spriteYaAsignado)
+        {
+            SetRandomSprite();
+        }
 
         myMatchManager.RegistrarCartaActivada(this.gameObject);
 

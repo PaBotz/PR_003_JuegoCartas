@@ -321,6 +321,8 @@ MonoBehaviour:
   tile: {fileID: 130870678761801661, guid: 36237e1091b47b042988a9f126f6a62b, type: 3}
   spacingX: 5
   spacingY: 7
+  mainCamera: {fileID: 519420031}
+  paddingCamara: 1.5
   sprites_Disponibles:
   - {fileID: -8770246151223524133, guid: 47622ac893af2a14d9088d184a098520, type: 3}
   - {fileID: 3266960263847023872, guid: e2a36a457cd67734896cb11451c39a0b, type: 3}
@@ -508,11 +510,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 24c7821d32480094d86169bdf73efc7c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::scr_MatchManager
-  cartasHijo_Activas: []
-  scripts_Cartas: []
+  cartasHijoActivas_List: []
+  scriptsCartas_List: []
   paresEncontrados: 0
   tiempoParaVerCartas: 1.5
-  tiempoAnimacionMatch: 1
 --- !u!4 &1618739016
 Transform:
   m_ObjectHideFlags: 0
