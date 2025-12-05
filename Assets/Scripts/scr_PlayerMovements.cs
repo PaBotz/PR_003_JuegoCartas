@@ -1,6 +1,7 @@
+using Unity.Netcode;
 using UnityEngine;
 
-public class scr_PlayerMovements : MonoBehaviour
+public class scr_PlayerMovements : NetworkBehaviour
 {
     [Header("Parametros")]
     [SerializeField] int velocidad;
@@ -20,6 +21,7 @@ public class scr_PlayerMovements : MonoBehaviour
 
     void Update()
     {
+        if(!IsOwner) return;
         myMove();
 
     }

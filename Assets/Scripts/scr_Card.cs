@@ -20,7 +20,7 @@ public class scr_Card : MonoBehaviour
     {
         Player = GameObject.Find("Player");
         myMatchManager= GameObject.Find("MatchManager");
-        my_scrPlayer = Player.GetComponent<scr_PlayerMovements>();
+        my_scrPlayer = Player.GetComponent<scr_PlayerMovements>(); //Por el network AHora debo encontrar un modo de solucionarlo
         myscr_SpriteCard = SpriteCard.GetComponent<scr_SpriteCard>();
         myscr_MatchManager = myMatchManager.GetComponent<scr_MatchManager>();
         card_Collision = false;
