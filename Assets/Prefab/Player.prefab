@@ -195,6 +195,7 @@ GameObject:
   - component: {fileID: 5378352133054459186}
   - component: {fileID: -807061103296704844}
   - component: {fileID: -1340525581705937475}
+  - component: {fileID: -6335599863536686123}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -351,7 +352,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 3816532296
+  GlobalObjectIdHash: 692885875
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -441,3 +442,52 @@ MonoBehaviour:
   UseRigidBodyForMotion: 0
   AutoUpdateKinematicState: 1
   AutoSetKinematicOnDespawn: 1
+--- !u!114 &-6335599863536686123
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5661936849187737666}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0f7f7133c0cbf4f259f04bbf8b104b59, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::scr_PlayerName
+  ShowTopMostFoldoutHeaderGroup: 1
+  playerName: {fileID: 1017365683147961488}
+  networkPlayerName:
+    m_InternalValue:
+      utf8LengthInBytes: 12
+      bytes:
+        offset0000:
+          byte0000: 68
+          byte0001: 101
+          byte0002: 102
+          byte0003: 97
+          byte0004: 117
+          byte0005: 108
+          byte0006: 116
+          byte0007: 32
+          byte0008: 78
+          byte0009: 97
+          byte0010: 109
+          byte0011: 101
+          byte0012: 0
+          byte0013: 0
+          byte0014: 0
+          byte0015: 0
+        byte0016: 0
+        byte0017: 0
+        byte0018: 0
+        byte0019: 0
+        byte0020: 0
+        byte0021: 0
+        byte0022: 0
+        byte0023: 0
+        byte0024: 0
+        byte0025: 0
+        byte0026: 0
+        byte0027: 0
+        byte0028: 0
+        byte0029: 0
