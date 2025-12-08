@@ -1,52 +1,125 @@
-using UnityEngine;
-using System.Collections;
+Ôªøusing System.Collections;
 using System.Collections.Generic;
+using Unity.Netcode;
+using UnityEngine;
 
-public class scr_Generator : MonoBehaviour
+public class scr_Generator : NetworkBehaviour
 {
     public Transform[,] tilesTransform;
-    public Vector2 mapSize;
+    public Vector2 mapSize; // Tama√±o por defecto
     public GameObject tile;
-    public float spacingX,spacingY;
-
+    public float spacingX, spacingY;
 
     [Header("Camara")]
-    public Camera mainCamera; // Arrastra tu c·mara aquÌ o dÈjalo en null para usar Camera.main
-    public float paddingCamara = 50f; // Espacio extra alrededor del mapa
+    public Camera mainCamera;
+    public float paddingCamara = 50f;
 
+    public List<Sprite> sprites_Disponibles;
+    public List<Sprite> mazo;
 
-    public List<Sprite> sprites_Disponibles; //Todas las opciones posibles de cartas
-    public List<Sprite> mazo; //Mazo con las opciones segun el tamaÒo de 
+    private bool partidaIniciada = false;
 
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Awake()
+    private Vector2 mapSizeTemporal;
+
+    // ‚úÖ A√ëADIR: Referencia al UIManager
+    private scr_UIManager uiManager;
+
+    private void Start()
     {
-        
+        if (NetworkManager.Singleton != null)
+        {
+            NetworkManager.Singleton.OnServerStarted += OnHostStartedFuncion;
+        }
+
+        mapSizeTemporal = mapSize;
+
+        // ‚úÖ A√ëADIR: Buscar el UIManager
+        uiManager = FindFirstObjectByType<scr_UIManager>();
+    }
+
+    private void Update()
+    {
+        // ‚úÖ Solo el host puede iniciar la partida
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsHost && !partidaIniciada)
+        {
+            if (Input.GetKeyDown(KeyCode.Return))
+            {
+                Debug.Log("üéÆ Iniciando partida...");
+                partidaIniciada = true;
+                IniciarPartida();
+            }
+        }
+    }
+
+    private void OnHostStartedFuncion()
+    {
+        if (NetworkManager.Singleton.IsHost)
+        {
+            Debug.Log("‚úî Host iniciado ‚Üí Esperando jugadores...");
+            Debug.Log("‚å®Ô∏è Presiona ENTER cuando todos est√©n listos para generar el mapa");
+
+            // ‚úÖ NO generar nada a√∫n, esperar a que presione ENTER
+        }
+    }
+
+    private void IniciarPartida()
+    {
+        mapSize = mapSizeTemporal;
+
         tilesTransform = new Transform[(int)mapSize.x, (int)mapSize.y];
+
         generatorMap();
         gestionDeLista();
-
         centrarCamara();
 
-        
+        Debug.Log($"‚úÖ Mapa generado: {mapSize.x}x{mapSize.y}");
+
+        // ‚úÖ Buscar UIManager si no lo tenemos
+        if (uiManager == null)
+        {
+            uiManager = FindFirstObjectByType<scr_UIManager>();
+        }
+
+        if (uiManager != null)
+        {
+            uiManager.OcultarConfigPanel();
+        }
+        else
+        {
+            Debug.LogWarning("‚ö†Ô∏è No se encontr√≥ el UIManager en la escena");
+        }
+    }
+
+    // ‚úÖ A√ëADIR: M√©todo p√∫blico para cambiar el tama√±o desde el UI
+    public void CambiarTamanoMapa(float ancho, float alto)
+    {
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsHost && !partidaIniciada)
+        {
+            mapSizeTemporal = new Vector2(ancho, alto);
+            Debug.Log($"üìê Tama√±o del mapa cambiado a: {ancho}x{alto}");
+        }
     }
 
     private void generatorMap()
     {
-        float offsetX = ((mapSize.x - 1) * spacingX) / 2f; //****CUANTO DA ESTO?****
+        float offsetX = ((mapSize.x - 1) * spacingX) / 2f;
         float offsetY = ((mapSize.y - 1) * spacingY) / 2f;
 
         for (int x = 0; x < mapSize.x; x++)
         {
-            for(int y = 0; y < mapSize.y; y++)
+            for (int y = 0; y < mapSize.y; y++)
             {
-                
-                Vector2 tilePosition = new Vector2(  //Vector2 tilePosition = new Vector2(x * spacingX,y * spacingY); //Sin restar offset
-                   (x * spacingX) - offsetX,         //Esto no es un JSON, lo pongo asÌ para que se vea m·s claro
+                Vector2 tilePosition = new Vector2(
+                   (x * spacingX) - offsetX,
                    (y * spacingY) - offsetY
-               );
-                GameObject cloneCard = Instantiate(tile,tilePosition,Quaternion.identity); //Quaternion Identiti equivale a una rotacion 0; Vector3(0,0,0);
-                tilesTransform[x,y]= cloneCard.transform;
+                );
+                GameObject cloneCard = Instantiate(tile, tilePosition, Quaternion.identity);
+
+                // ‚úÖ Spawnear en red - TODOS ver√°n el MISMO objeto sincronizado
+                NetworkObject netObj = cloneCard.GetComponent<NetworkObject>();
+                netObj.Spawn();
+
+                tilesTransform[x, y] = cloneCard.transform;
             }
         }
     }
@@ -54,48 +127,43 @@ public class scr_Generator : MonoBehaviour
     private void gestionDeLista()
     {
         int espacioDisponible = (int)(mapSize.x * mapSize.y);
-        int cartasRequeridas = espacioDisponible / 2; // Int con la mitad de espacios de cartas para luego meter los duplicados
+        int cartasRequeridas = espacioDisponible / 2;
+        int max = Mathf.Min(sprites_Disponibles.Count, cartasRequeridas);
 
-        int max = Mathf.Min(sprites_Disponibles.Count, cartasRequeridas); //Coge el valor m·s pequeÒo; Esto nos ayuda en caso de que algun array quede m·s grande que el otro (que no nos pasemos)
-                                                                          
-
-        for (int i=0;i<max; i++)
+        for (int i = 0; i < max; i++)
         {
-            Debug.Log("max: " + max);
-            var carta = sprites_Disponibles[i]; //AÒade el sprite del n˙mero de indice actual.
+            var carta = sprites_Disponibles[i];
             mazo.Add(carta);
-            mazo.Add(carta); 
-
+            mazo.Add(carta);
         }
+
+        // ‚úÖ NO necesitamos sincronizar el mazo
+        // Solo el servidor lo usa para asignar sprites
     }
-  private void centrarCamara()
+
+    private void centrarCamara()
     {
-        // Centrar la c·mara en el origen (donde est· el mapa)
-        //Es un poco inecesario, pues la camara ya est· centrada, pero es una buena praxis
+        if (mainCamera == null) mainCamera = Camera.main;
+
         Vector3 camaraPos = mainCamera.transform.position;
         camaraPos.x = 0;
         camaraPos.y = 0;
         mainCamera.transform.position = camaraPos;
 
-        // Calcular el tamaÒo total del mapa
-        float anchoMapa = (mapSize.x - 1) * spacingX; //Se resta uno para que quede centrado, si no quedarÌa desfasado a la derecha
-        float altoMapa = (mapSize.y - 1) * spacingY;  //Explicacion: mapSize.y - 1 = el numero de espacios entre cartas Ejemplo C | C | C (2 espacios y 3 cartas)
-
-        // Calcular el tamaÒo de c·mara necesario
-        // Orthographic size es la MITAD de la altura visible
+        float anchoMapa = (mapSize.x - 1) * spacingX;
+        float altoMapa = (mapSize.y - 1) * spacingY;
         float altoCamaraNecesario = (altoMapa / 2f) + paddingCamara;
         float anchoCamaraNecesario = (anchoMapa / 2f) + paddingCamara;
+        float aspectRatio = mainCamera.aspect;
 
-        // Ajustar seg˙n el aspect ratio de la c·mara
-        float aspectRatio = mainCamera.aspect; // ancho/alto
-        float sizePorAltura = altoCamaraNecesario; //Refencia
-        float sizePorAnchura = anchoCamaraNecesario / aspectRatio; //Referencia
-
-        // Usar el mayor de los dos para que todo quepa
-        mainCamera.orthographicSize = Mathf.Max(sizePorAltura, sizePorAnchura);
-
-        Debug.Log($"C·mara ajustada. Size: {mainCamera.orthographicSize}, Aspect: {aspectRatio}");
-
+        mainCamera.orthographicSize = Mathf.Max(altoCamaraNecesario, anchoCamaraNecesario / aspectRatio);
     }
 
+    private void OnDestroy()
+    {
+        if (NetworkManager.Singleton != null)
+        {
+            NetworkManager.Singleton.OnServerStarted -= OnHostStartedFuncion;
+        }
+    }
 }
