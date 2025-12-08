@@ -2,10 +2,6 @@
 using Unity.Netcode;
 using UnityEngine;
 
-/// <summary>
-/// Sistema de puntajes sincronizado en red.
-/// Maneja los puntos de cada jugador.
-/// </summary>
 public class scr_ScoreSystem : NetworkBehaviour
 {
     public static scr_ScoreSystem Instance { get; private set; }
@@ -50,9 +46,6 @@ public class scr_ScoreSystem : NetworkBehaviour
         }
     }
 
-    /// <summary>
-    /// Cuando se conecta un jugador, inicializar su puntaje
-    /// </summary>
     private void OnClientConnected(ulong clientId)
     {
         if (IsServer)
@@ -61,9 +54,6 @@ public class scr_ScoreSystem : NetworkBehaviour
         }
     }
 
-    /// <summary>
-    /// Registra un jugador con puntaje inicial de 0
-    /// </summary>
     public void RegistrarJugador(ulong clientId)
     {
         if (!IsServer) return;
@@ -71,21 +61,19 @@ public class scr_ScoreSystem : NetworkBehaviour
         if (!puntajes.ContainsKey(clientId))
         {
             puntajes[clientId] = 0;
-            Debug.Log($"👤 Jugador {clientId} registrado con 0 puntos");
+            Debug.Log($"Jugador {clientId} registrado con 0 puntos");
 
             // Notificar a todos los clientes
             ActualizarPuntajeClientRpc(clientId, 0);
         }
     }
 
-    /// <summary>
-    /// Agrega puntos a un jugador - SOLO EL SERVIDOR
-    /// </summary>
+
     public void AgregarPuntos(ulong clientId, int puntos)
     {
         if (!IsServer)
         {
-            Debug.LogWarning("⚠️ Solo el servidor puede agregar puntos");
+            Debug.LogWarning("Solo el servidor puede agregar puntos");
             return;
         }
 
@@ -97,42 +85,31 @@ public class scr_ScoreSystem : NetworkBehaviour
         puntajes[clientId] += puntos;
         int nuevoPuntaje = puntajes[clientId];
 
-        Debug.Log($"⭐ Jugador {clientId} ahora tiene {nuevoPuntaje} puntos (+{puntos})");
+        Debug.Log($"Jugador {clientId} ahora tiene {nuevoPuntaje} puntos (+{puntos})");
 
         // Sincronizar con todos los clientes
         ActualizarPuntajeClientRpc(clientId, nuevoPuntaje);
     }
 
-    /// <summary>
-    /// Sincroniza el puntaje en todos los clientes
-    /// </summary>
     [ClientRpc]
     private void ActualizarPuntajeClientRpc(ulong clientId, int puntaje)
     {
         puntajes[clientId] = puntaje;
         OnPuntajeCambiado?.Invoke(clientId, puntaje);
-        Debug.Log($"📊 [Cliente] Puntaje actualizado - Jugador {clientId}: {puntaje}");
+        Debug.Log($"[Cliente] Puntaje actualizado - Jugador {clientId}: {puntaje}");
     }
 
-    /// <summary>
-    /// Obtiene el puntaje de un jugador
-    /// </summary>
     public int ObtenerPuntaje(ulong clientId)
     {
         return puntajes.TryGetValue(clientId, out int puntaje) ? puntaje : 0;
     }
 
-    /// <summary>
-    /// Obtiene todos los puntajes
-    /// </summary>
+
     public Dictionary<ulong, int> ObtenerTodosPuntajes()
     {
         return new Dictionary<ulong, int>(puntajes);
     }
 
-    /// <summary>
-    /// Determina el ganador - SOLO EL SERVIDOR
-    /// </summary>
     public void DeterminarGanador()
     {
         if (!IsServer) return;
@@ -176,15 +153,12 @@ public class scr_ScoreSystem : NetworkBehaviour
             nombreGanador = "¡EMPATE!";
         }
 
-        Debug.Log($"🏆 GANADOR: {nombreGanador} con {maxPuntaje} puntos");
+        Debug.Log($"GANADOR: {nombreGanador} con {maxPuntaje} puntos");
 
         // Notificar a todos los clientes
         NotificarGanadorClientRpc(ganadorId, nombreGanador, maxPuntaje, hayEmpate);
     }
 
-    /// <summary>
-    /// Notifica el ganador a todos los clientes
-    /// </summary>
     [ClientRpc]
     private void NotificarGanadorClientRpc(ulong ganadorId, string nombre, int puntaje, bool empate)
     {
@@ -197,12 +171,10 @@ public class scr_ScoreSystem : NetworkBehaviour
             OnJuegoTerminado?.Invoke(ganadorId, nombre, puntaje);
         }
 
-        Debug.Log($"🎊 [Cliente] Juego terminado - {nombre}: {puntaje} puntos");
+        Debug.Log($"[Cliente] Juego terminado - {nombre}: {puntaje} puntos");
     }
 
-    /// <summary>
-    /// Reinicia todos los puntajes - SOLO EL SERVIDOR
-    /// </summary>
+
     public void ReiniciarPuntajes()
     {
         if (!IsServer) return;
@@ -214,6 +186,6 @@ public class scr_ScoreSystem : NetworkBehaviour
             ActualizarPuntajeClientRpc(key, 0);
         }
 
-        Debug.Log("🔄 Puntajes reiniciados");
+        Debug.Log("Puntajes reiniciados");
     }
 }

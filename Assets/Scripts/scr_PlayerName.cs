@@ -29,17 +29,13 @@ public class scr_PlayerName : NetworkBehaviour
         OnNameChanged?.Invoke(networkPlayerName.Value.ToString());
     }
 
-    /// <summary>
-    /// Obtiene el nombre del InputField sin depender directamente del tipo scr_UIManager
-    /// </summary>
     private string ObtenerNombreDelInput()
     {
-        // Buscar el UIManager por nombre
         GameObject uiManagerObj = GameObject.Find("UIManager");
 
         if (uiManagerObj != null)
         {
-            // Buscar el InputField en los hijos del UIManager
+          
             TMP_InputField inputField = uiManagerObj.GetComponentInChildren<TMP_InputField>();
 
             if (inputField != null && !string.IsNullOrEmpty(inputField.text))
@@ -48,7 +44,6 @@ public class scr_PlayerName : NetworkBehaviour
             }
         }
 
-        // Fallback: buscar cualquier InputField con el tag o nombre específico
         GameObject inputObj = GameObject.Find("NombreInputField");
         if (inputObj != null)
         {
@@ -59,8 +54,8 @@ public class scr_PlayerName : NetworkBehaviour
             }
         }
 
-        // Si no encuentra nada, usar nombre por defecto
-        return "Jugador " + OwnerClientId;
+       
+        return "Jugador " + OwnerClientId; // Si no encuentra nada, usar nombre default
     }
 
     private void NetworkPlayerName_OnValueChanged(FixedString32Bytes previousValue, FixedString32Bytes newValue)

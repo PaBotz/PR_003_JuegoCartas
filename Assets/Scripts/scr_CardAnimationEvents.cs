@@ -1,10 +1,5 @@
 ﻿using UnityEngine;
 
-/// <summary>
-/// Script auxiliar para manejar Animation Events.
-/// Se coloca en el GameObject que tiene el Animator.
-/// Notifica al MatchManager cuando termina la animación de match.
-/// </summary>
 public class scr_CardAnimationEvents : MonoBehaviour
 {
     private scr_MatchManager matchManager;
@@ -15,13 +10,10 @@ public class scr_CardAnimationEvents : MonoBehaviour
 
         if (matchManager == null)
         {
-            Debug.LogWarning("⚠️ No se encontró MatchManager");
+            Debug.LogWarning("No se encontro MatchManager");
         }
     }
 
-    /// <summary>
-    /// Llamado por Animation Event al final de la animación "Match"
-    /// </summary>
     public void OnMatchAnimationEnd()
     {
         if (matchManager == null)
@@ -32,11 +24,11 @@ public class scr_CardAnimationEvents : MonoBehaviour
         if (matchManager != null)
         {
             matchManager.EliminarCartasMatch();
-            Debug.Log("🎬 Animation Event: Notificado al MatchManager");
+            Debug.Log("Animation Event: Notificado al MatchManager");
         }
         else
         {
-            Debug.LogError("❌ [AnimationEvent] No se encontró MatchManager");
+            Debug.LogError("[AnimationEvent] No se encontró MatchManager");
         }
     }
 }

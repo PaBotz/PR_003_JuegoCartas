@@ -132,10 +132,6 @@ public class scr_Card : NetworkBehaviour
         card_Active = true;
     }
 
-    /// <summary>
-    /// Oculta el sprite en todos los clientes (cuando NO hay match).
-    /// Solo el servidor puede llamar esto.
-    /// </summary>
     public void OcultarSpriteEnRed()
     {
         if (!IsServer) return;
@@ -153,10 +149,6 @@ public class scr_Card : NetworkBehaviour
         Debug.Log("[Cliente] Carta ocultada");
     }
 
-    /// <summary>
-    /// Desactiva toda la carta en todos los clientes (cuando HAY match).
-    /// Solo el servidor puede llamar esto.
-    /// </summary>
     public void DesactivarCartaEnRed()
     {
         if (!IsServer) return;
@@ -176,10 +168,7 @@ public class scr_Card : NetworkBehaviour
         Debug.Log("[Cliente] Carta desactivada completamente");
     }
 
-    /// <summary>
-    /// Resetea el estado de la carta en todos los clientes.
-    /// Solo el servidor puede llamar esto.
-    /// </summary>
+
     public void ResetCardActiveEnRed()
     {
         if (!IsServer) return;

@@ -3,9 +3,6 @@ using System.Collections.Generic;
 using Unity.Netcode;
 using UnityEngine;
 
-/// <summary>
-/// Genera el mapa de cartas.
-/// </summary>
 public class scr_Generator : NetworkBehaviour
 {
     [Header("Configuración del Mapa")]
@@ -54,7 +51,7 @@ public class scr_Generator : NetworkBehaviour
     {
         if (NetworkManager.Singleton.IsHost)
         {
-            Debug.Log("Host iniciado → Esperando jugadores...");
+            Debug.Log("Host iniciado... Esperando jugadores...");
             Debug.Log("Presiona ENTER cuando todos estén listos para generar el mapa");
         }
     }
@@ -78,7 +75,6 @@ public class scr_Generator : NetworkBehaviour
 
         Debug.Log($"Mapa generado: {mapSize.x}x{mapSize.y} ({totalPares} pares)");
 
-        // Ocultar panel de configuración usando SendMessage (evita dependencia de tipo)
         OcultarUIConfig();
 
         // Notificar a todos los clientes
@@ -99,7 +95,7 @@ public class scr_Generator : NetworkBehaviour
     {
         Debug.Log("[Cliente] ¡Partida iniciada!");
 
-        // Actualizar UI en cada cliente
+     
         GameObject uiObj = GameObject.Find("UIManager");
         if (uiObj != null)
         {
@@ -112,7 +108,7 @@ public class scr_Generator : NetworkBehaviour
         if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsHost && !partidaIniciada)
         {
             mapSizeTemporal = new Vector2(ancho, alto);
-            Debug.Log($"Tamaño del mapa cambiado a: {ancho}x{alto}");
+            Debug.Log($"Tamanyo del mapa cambiado a: {ancho}x{alto}");
         }
     }
 
