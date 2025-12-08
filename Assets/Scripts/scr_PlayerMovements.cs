@@ -1,4 +1,4 @@
-using Unity.Netcode;
+﻿using Unity.Netcode;
 using UnityEngine;
 
 public class scr_PlayerMovements : NetworkBehaviour
@@ -21,7 +21,7 @@ public class scr_PlayerMovements : NetworkBehaviour
 
     void Update()
     {
-        if(!IsOwner) return;
+        if (!IsOwner) return;
         myMove();
 
     }

@@ -1,38 +1,31 @@
 ﻿using UnityEngine;
-using Unity.Netcode;
+using System.Collections.Generic;
+// QUITAMOS: using Unity.Netcode; - Ya no es necesario
 
 /// <summary>
-/// Maneja el sprite frontal de la carta (la imagen que se revela).
-/// Este script NO necesita NetworkObject propio - usa el del padre.
-/// La sincronización se hace a través del padre (scr_Card).
+/// Maneja el sprite frontal de la carta.
+/// IMPORTANTE: Este script ya NO es NetworkBehaviour.
+/// La sincronización la maneja el padre (scr_Card).
 /// </summary>
-public class scr_SpriteCard : MonoBehaviour
+public class scr_SpriteCard : MonoBehaviour  // CAMBIADO: Era NetworkBehaviour
 {
-    [Header("Configuración de Render")]
+    [Header("Sprites disponibles")]
     public string sortingLayerName = "Front_Card";
     public int orderInLayer = 1;
 
-    // Componentes
     private SpriteRenderer sr;
     private Sprite sprite_Propio;
     private bool spriteYaAsignado = false;
 
-    // Referencias (se asignan automáticamente)
     [HideInInspector] public scr_Generator myGenerator;
     [HideInInspector] public scr_MatchManager myMatchManager;
-    [HideInInspector] public GameObject cartaPadre;
-
-    // Referencia al script del padre para usar sus RPCs
-    private scr_Card parentCard;
+    public GameObject cartaPadre;
 
     void Awake()
     {
         sr = GetComponent<SpriteRenderer>();
         myGenerator = FindFirstObjectByType<scr_Generator>();
         myMatchManager = FindFirstObjectByType<scr_MatchManager>();
-
-        // Buscar el scr_Card en los padres
-        parentCard = GetComponentInParent<scr_Card>();
 
         // Configurar sorting layer
         if (sr != null)
@@ -43,7 +36,7 @@ public class scr_SpriteCard : MonoBehaviour
     }
 
     /// <summary>
-    /// Asigna un sprite aleatorio del mazo. Solo el servidor ejecuta esto.
+    /// Asigna un sprite aleatorio. Solo llamar desde el servidor.
     /// Retorna el índice del sprite para sincronizar.
     /// </summary>
     public int SetRandomSprite()
@@ -57,18 +50,19 @@ public class scr_SpriteCard : MonoBehaviour
         int randomIndex = Random.Range(0, myGenerator.mazo.Count);
         Sprite spriteElegido = myGenerator.mazo[randomIndex];
         int indiceSprite = myGenerator.sprites_Disponibles.IndexOf(spriteElegido);
-
         myGenerator.mazo.RemoveAt(randomIndex);
+
         spriteYaAsignado = true;
 
-        // Aplicar localmente en el servidor
+        // Aplicar sprite localmente (en el servidor)
         AplicarSprite(indiceSprite);
 
         return indiceSprite;
     }
 
     /// <summary>
-    /// Aplica un sprite por su índice (llamado desde ClientRpc del padre)
+    /// Aplica un sprite por su índice. 
+    /// Llamado por scr_Card en todos los clientes.
     /// </summary>
     public void AplicarSprite(int indiceSprite)
     {
@@ -86,20 +80,16 @@ public class scr_SpriteCard : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Devuelve el sprite de esta carta para comparaciones
-    /// </summary>
     public Sprite ObtenerSprite()
     {
         return sprite_Propio;
     }
 
     /// <summary>
-    /// Desactiva el objeto raíz completo (toda la carta)
+    /// Desactiva el objeto raíz de la carta.
     /// </summary>
     public void DesactivarPadre()
     {
-        // Si cartaPadre está asignado en el inspector, usarlo
         if (cartaPadre != null)
         {
             cartaPadre.SetActive(false);
@@ -112,14 +102,14 @@ public class scr_SpriteCard : MonoBehaviour
         {
             raiz = raiz.parent;
         }
-
         raiz.gameObject.SetActive(false);
     }
 
     /// <summary>
-    /// Llamado cuando el jugador activa esta carta (desde scr_Card)
+    /// Llamado cuando el jugador activa esta carta.
+    /// Retorna el índice del sprite si se asignó uno nuevo, -1 si ya tenía.
     /// </summary>
-    public void CartaActivada(ulong clientIdJugador)
+    public int CartaActivada()
     {
         int indiceSprite = -1;
 
@@ -128,26 +118,19 @@ public class scr_SpriteCard : MonoBehaviour
             indiceSprite = SetRandomSprite();
         }
 
-        // Registrar en MatchManager con el ID del jugador
+        // Registrar en MatchManager
         if (myMatchManager != null)
         {
-            myMatchManager.RegistrarCartaActivada(this.gameObject, clientIdJugador);
+            myMatchManager.RegistrarCartaActivada(this.gameObject);
         }
         else
         {
             Debug.LogError("[SpriteCard] No se encontró MatchManager");
         }
 
-        // Retornar el índice para que el padre lo sincronice
-        if (parentCard != null && indiceSprite >= 0)
-        {
-            parentCard.SincronizarSpriteIndex(indiceSprite);
-        }
+        return indiceSprite;
     }
 
-    /// <summary>
-    /// Oculta el sprite localmente
-    /// </summary>
     public void OcultarSprite()
     {
         if (sr != null)
@@ -156,9 +139,6 @@ public class scr_SpriteCard : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Muestra el sprite localmente
-    /// </summary>
     public void MostrarSprite()
     {
         if (sr != null)

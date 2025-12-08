@@ -1,10 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections;
+using System.Collections.Generic;
 using Unity.Netcode;
 using UnityEngine;
 
 /// <summary>
-/// Genera el mapa de cartas y gestiona el mazo de sprites.
-/// Inicializa el MatchManager con el total de pares a encontrar.
+/// Genera el mapa de cartas.
 /// </summary>
 public class scr_Generator : NetworkBehaviour
 {
@@ -12,8 +12,7 @@ public class scr_Generator : NetworkBehaviour
     public Transform[,] tilesTransform;
     public Vector2 mapSize;
     public GameObject tile;
-    public float spacingX = 2f;
-    public float spacingY = 2f;
+    public float spacingX, spacingY;
 
     [Header("Cámara")]
     public Camera mainCamera;
@@ -23,16 +22,8 @@ public class scr_Generator : NetworkBehaviour
     public List<Sprite> sprites_Disponibles;
     public List<Sprite> mazo;
 
-    [Header("Referencias (Opcional - se buscan automáticamente)")]
-    [SerializeField] private GameObject uiManagerObject;
-
-    // Control de estado
     private bool partidaIniciada = false;
     private Vector2 mapSizeTemporal;
-
-    // Referencias
-    private scr_MatchManager matchManager;
-    private scr_ScoreSystem scoreSystem;
 
     private void Start()
     {
@@ -43,19 +34,16 @@ public class scr_Generator : NetworkBehaviour
 
         mapSizeTemporal = mapSize;
         mazo = new List<Sprite>();
-
-        // Buscar referencias
-        matchManager = FindFirstObjectByType<scr_MatchManager>();
-        scoreSystem = FindFirstObjectByType<scr_ScoreSystem>();
     }
 
     private void Update()
     {
+        // Solo el host puede iniciar la partida
         if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsHost && !partidaIniciada)
         {
             if (Input.GetKeyDown(KeyCode.Return))
             {
-                Debug.Log("[Generator] Iniciando partida...");
+                Debug.Log("Iniciando partida...");
                 partidaIniciada = true;
                 IniciarPartida();
             }
@@ -66,19 +54,8 @@ public class scr_Generator : NetworkBehaviour
     {
         if (NetworkManager.Singleton.IsHost)
         {
-            Debug.Log("[Generator] Host iniciado → Esperando jugadores...");
-            Debug.Log("[Generator] Presiona ENTER cuando todos estén listos");
-
-            // Registrar al host en el sistema de puntaje
-            if (scoreSystem == null)
-            {
-                scoreSystem = FindFirstObjectByType<scr_ScoreSystem>();
-            }
-
-            if (scoreSystem != null)
-            {
-                scoreSystem.RegistrarJugador(NetworkManager.Singleton.LocalClientId);
-            }
+            Debug.Log("Host iniciado → Esperando jugadores...");
+            Debug.Log("Presiona ENTER cuando todos estén listos para generar el mapa");
         }
     }
 
@@ -87,80 +64,55 @@ public class scr_Generator : NetworkBehaviour
         mapSize = mapSizeTemporal;
         tilesTransform = new Transform[(int)mapSize.x, (int)mapSize.y];
 
-        // Generar el mapa y mazo
         GenerarMazo();
         GenerarMapa();
         CentrarCamara();
 
         // Calcular total de pares e informar al MatchManager
         int totalPares = (int)(mapSize.x * mapSize.y) / 2;
-
-        if (matchManager == null)
-        {
-            matchManager = FindFirstObjectByType<scr_MatchManager>();
-        }
-
+        scr_MatchManager matchManager = FindFirstObjectByType<scr_MatchManager>();
         if (matchManager != null)
         {
-            matchManager.InicializarTotalPares(totalPares);
+            matchManager.InicializarPartida(totalPares);
         }
 
-        Debug.Log($"[Generator] Mapa generado: {mapSize.x}x{mapSize.y} ({totalPares} pares)");
+        Debug.Log($"Mapa generado: {mapSize.x}x{mapSize.y} ({totalPares} pares)");
 
-        // Ocultar panel de configuración usando SendMessage para evitar dependencia de tipo
+        // Ocultar panel de configuración usando SendMessage (evita dependencia de tipo)
         OcultarUIConfig();
 
-        // Notificar a los clientes que la partida comenzó
-        NotificarInicioPartidaClientRpc();
+        // Notificar a todos los clientes
+        NotificarInicioClientRpc();
     }
 
     private void OcultarUIConfig()
     {
-        // Buscar el UIManager sin depender del tipo directamente
-        if (uiManagerObject != null)
+        GameObject uiObj = GameObject.Find("UIManager");
+        if (uiObj != null)
         {
-            uiManagerObject.SendMessage("OcultarConfigPanel", SendMessageOptions.DontRequireReceiver);
-        }
-        else
-        {
-            // Buscar por nombre si no está asignado
-            GameObject uiObj = GameObject.Find("UIManager");
-            if (uiObj != null)
-            {
-                uiObj.SendMessage("OcultarConfigPanel", SendMessageOptions.DontRequireReceiver);
-            }
+            uiObj.SendMessage("OcultarConfigPanel", SendMessageOptions.DontRequireReceiver);
         }
     }
 
     [ClientRpc]
-    private void NotificarInicioPartidaClientRpc()
+    private void NotificarInicioClientRpc()
     {
-        Debug.Log("[Generator][Cliente] ¡Partida iniciada!");
+        Debug.Log("[Cliente] ¡Partida iniciada!");
 
-        // Notificar UI usando SendMessage
-        if (uiManagerObject != null)
+        // Actualizar UI en cada cliente
+        GameObject uiObj = GameObject.Find("UIManager");
+        if (uiObj != null)
         {
-            uiManagerObject.SendMessage("MostrarPartidaIniciada", SendMessageOptions.DontRequireReceiver);
-        }
-        else
-        {
-            GameObject uiObj = GameObject.Find("UIManager");
-            if (uiObj != null)
-            {
-                uiObj.SendMessage("MostrarPartidaIniciada", SendMessageOptions.DontRequireReceiver);
-            }
+            uiObj.SendMessage("MostrarPartidaIniciada", SendMessageOptions.DontRequireReceiver);
         }
     }
 
-    /// <summary>
-    /// Método público para cambiar el tamaño desde el UI
-    /// </summary>
     public void CambiarTamanoMapa(float ancho, float alto)
     {
         if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsHost && !partidaIniciada)
         {
             mapSizeTemporal = new Vector2(ancho, alto);
-            Debug.Log($"[Generator] Tamaño del mapa: {ancho}x{alto}");
+            Debug.Log($"Tamaño del mapa cambiado a: {ancho}x{alto}");
         }
     }
 
@@ -176,10 +128,10 @@ public class scr_Generator : NetworkBehaviour
         {
             var carta = sprites_Disponibles[i];
             mazo.Add(carta);
-            mazo.Add(carta); // Cada sprite se añade dos veces (par)
+            mazo.Add(carta);
         }
 
-        Debug.Log($"[Generator] Mazo creado con {mazo.Count} cartas ({max} pares)");
+        Debug.Log($"Mazo creado con {mazo.Count} cartas");
     }
 
     private void GenerarMapa()
@@ -192,12 +144,13 @@ public class scr_Generator : NetworkBehaviour
             for (int y = 0; y < mapSize.y; y++)
             {
                 Vector2 tilePosition = new Vector2(
-                    (x * spacingX) - offsetX,
-                    (y * spacingY) - offsetY
+                   (x * spacingX) - offsetX,
+                   (y * spacingY) - offsetY
                 );
 
                 GameObject cloneCard = Instantiate(tile, tilePosition, Quaternion.identity);
 
+                // Spawnear en red
                 NetworkObject netObj = cloneCard.GetComponent<NetworkObject>();
                 if (netObj != null)
                 {
@@ -211,11 +164,7 @@ public class scr_Generator : NetworkBehaviour
 
     private void CentrarCamara()
     {
-        if (mainCamera == null)
-        {
-            mainCamera = Camera.main;
-        }
-
+        if (mainCamera == null) mainCamera = Camera.main;
         if (mainCamera == null) return;
 
         Vector3 camaraPos = mainCamera.transform.position;

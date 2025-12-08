@@ -1,4 +1,4 @@
-using System;
+Ôªøusing System;
 using TMPro;
 using Unity.Collections;
 using Unity.Netcode;
@@ -8,7 +8,7 @@ public class scr_PlayerName : NetworkBehaviour
 {
     [SerializeField] private TextMeshPro playerName;
 
-    // NetworkVariable sincronizada autom·ticamente entre servidor y clientes
+    // NetworkVariable sincronizada autom√°ticamente entre servidor y clientes
     public NetworkVariable<FixedString32Bytes> networkPlayerName =
         new NetworkVariable<FixedString32Bytes>("Default Name",
         NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
@@ -48,7 +48,7 @@ public class scr_PlayerName : NetworkBehaviour
             }
         }
 
-        // Fallback: buscar cualquier InputField con el tag o nombre especÌfico
+        // Fallback: buscar cualquier InputField con el tag o nombre espec√≠fico
         GameObject inputObj = GameObject.Find("NombreInputField");
         if (inputObj != null)
         {

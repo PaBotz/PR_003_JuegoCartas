@@ -1,26 +1,25 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Unity.Netcode;
 using UnityEngine;
 
 /// <summary>
-/// Sistema de puntaje sincronizado en red.
-/// Maneja los puntos de cada jugador y notifica cambios.
+/// Sistema de puntajes sincronizado en red.
+/// Maneja los puntos de cada jugador.
 /// </summary>
 public class scr_ScoreSystem : NetworkBehaviour
 {
     public static scr_ScoreSystem Instance { get; private set; }
 
-    // Diccionario local para UI - se actualiza via eventos
-    private Dictionary<ulong, int> puntajesLocales = new Dictionary<ulong, int>();
+    // Almacenamiento local de puntajes
+    private Dictionary<ulong, int> puntajes = new Dictionary<ulong, int>();
 
-    // Evento que se dispara cuando cambia el puntaje de cualquier jugador
+    // Eventos
     public System.Action<ulong, int> OnPuntajeCambiado;
-
-    // Evento que se dispara cuando hay un ganador
-    public System.Action<ulong, string, int> OnJuegoTerminado; // clientId, nombre, puntaje
+    public System.Action<ulong, string, int> OnJuegoTerminado;
 
     private void Awake()
     {
+        // Singleton
         if (Instance == null)
         {
             Instance = this;
@@ -37,7 +36,6 @@ public class scr_ScoreSystem : NetworkBehaviour
 
         if (IsServer)
         {
-            // El servidor escucha cuando se conectan jugadores
             NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
         }
     }
@@ -52,64 +50,68 @@ public class scr_ScoreSystem : NetworkBehaviour
         }
     }
 
+    /// <summary>
+    /// Cuando se conecta un jugador, inicializar su puntaje
+    /// </summary>
     private void OnClientConnected(ulong clientId)
     {
         if (IsServer)
         {
-            // Inicializar puntaje del nuevo jugador
-            if (!puntajesLocales.ContainsKey(clientId))
-            {
-                puntajesLocales[clientId] = 0;
-                Debug.Log($"[ScoreSystem] Jugador {clientId} registrado con 0 puntos");
-            }
+            RegistrarJugador(clientId);
         }
     }
 
     /// <summary>
-    /// Registra un jugador manualmente (�til para el host)
+    /// Registra un jugador con puntaje inicial de 0
     /// </summary>
     public void RegistrarJugador(ulong clientId)
     {
         if (!IsServer) return;
 
-        if (!puntajesLocales.ContainsKey(clientId))
+        if (!puntajes.ContainsKey(clientId))
         {
-            puntajesLocales[clientId] = 0;
-            Debug.Log($"[ScoreSystem] Jugador {clientId} registrado manualmente");
+            puntajes[clientId] = 0;
+            Debug.Log($"👤 Jugador {clientId} registrado con 0 puntos");
+
+            // Notificar a todos los clientes
+            ActualizarPuntajeClientRpc(clientId, 0);
         }
     }
 
     /// <summary>
-    /// A�ade puntos a un jugador espec�fico. Solo el servidor puede llamar esto.
+    /// Agrega puntos a un jugador - SOLO EL SERVIDOR
     /// </summary>
     public void AgregarPuntos(ulong clientId, int puntos)
     {
         if (!IsServer)
         {
-            Debug.LogWarning("[ScoreSystem] Solo el servidor puede agregar puntos");
+            Debug.LogWarning("⚠️ Solo el servidor puede agregar puntos");
             return;
         }
 
-        if (!puntajesLocales.ContainsKey(clientId))
+        if (!puntajes.ContainsKey(clientId))
         {
-            puntajesLocales[clientId] = 0;
+            puntajes[clientId] = 0;
         }
 
-        puntajesLocales[clientId] += puntos;
-        int nuevoPuntaje = puntajesLocales[clientId];
+        puntajes[clientId] += puntos;
+        int nuevoPuntaje = puntajes[clientId];
 
-        Debug.Log($"[ScoreSystem] Jugador {clientId} ahora tiene {nuevoPuntaje} puntos");
+        Debug.Log($"⭐ Jugador {clientId} ahora tiene {nuevoPuntaje} puntos (+{puntos})");
 
-        // Notificar a TODOS los clientes del cambio
+        // Sincronizar con todos los clientes
         ActualizarPuntajeClientRpc(clientId, nuevoPuntaje);
     }
 
+    /// <summary>
+    /// Sincroniza el puntaje en todos los clientes
+    /// </summary>
     [ClientRpc]
-    private void ActualizarPuntajeClientRpc(ulong clientId, int nuevoPuntaje)
+    private void ActualizarPuntajeClientRpc(ulong clientId, int puntaje)
     {
-        puntajesLocales[clientId] = nuevoPuntaje;
-        OnPuntajeCambiado?.Invoke(clientId, nuevoPuntaje);
-        Debug.Log($"[ScoreSystem][Cliente] Puntaje actualizado - Jugador {clientId}: {nuevoPuntaje}");
+        puntajes[clientId] = puntaje;
+        OnPuntajeCambiado?.Invoke(clientId, puntaje);
+        Debug.Log($"📊 [Cliente] Puntaje actualizado - Jugador {clientId}: {puntaje}");
     }
 
     /// <summary>
@@ -117,19 +119,19 @@ public class scr_ScoreSystem : NetworkBehaviour
     /// </summary>
     public int ObtenerPuntaje(ulong clientId)
     {
-        return puntajesLocales.TryGetValue(clientId, out int puntaje) ? puntaje : 0;
+        return puntajes.TryGetValue(clientId, out int puntaje) ? puntaje : 0;
     }
 
     /// <summary>
-    /// Obtiene todos los puntajes actuales
+    /// Obtiene todos los puntajes
     /// </summary>
     public Dictionary<ulong, int> ObtenerTodosPuntajes()
     {
-        return new Dictionary<ulong, int>(puntajesLocales);
+        return new Dictionary<ulong, int>(puntajes);
     }
 
     /// <summary>
-    /// Determina el ganador y notifica a todos. Solo el servidor llama esto.
+    /// Determina el ganador - SOLO EL SERVIDOR
     /// </summary>
     public void DeterminarGanador()
     {
@@ -137,73 +139,81 @@ public class scr_ScoreSystem : NetworkBehaviour
 
         ulong ganadorId = 0;
         int maxPuntaje = -1;
-        bool empate = false;
+        bool hayEmpate = false;
 
-        foreach (var kvp in puntajesLocales)
+        // Buscar el puntaje más alto
+        foreach (var kvp in puntajes)
         {
             if (kvp.Value > maxPuntaje)
             {
                 maxPuntaje = kvp.Value;
                 ganadorId = kvp.Key;
-                empate = false;
+                hayEmpate = false;
             }
-            else if (kvp.Value == maxPuntaje)
+            else if (kvp.Value == maxPuntaje && maxPuntaje > 0)
             {
-                empate = true;
+                hayEmpate = true;
             }
         }
 
         // Buscar el nombre del ganador
         string nombreGanador = "Jugador " + ganadorId;
 
-        // Buscar en los objetos de jugador
-        foreach (var player in FindObjectsByType<scr_PlayerName>(FindObjectsSortMode.None))
+        if (!hayEmpate)
         {
-            if (player.OwnerClientId == ganadorId)
+            scr_PlayerName[] jugadores = FindObjectsByType<scr_PlayerName>(FindObjectsSortMode.None);
+            foreach (var jugador in jugadores)
             {
-                nombreGanador = player.GetPlayerName();
-                break;
+                if (jugador.OwnerClientId == ganadorId)
+                {
+                    nombreGanador = jugador.GetPlayerName();
+                    break;
+                }
             }
-        }
-
-        if (empate)
-        {
-            nombreGanador = "�EMPATE!";
-        }
-
-        Debug.Log($"[ScoreSystem] Juego terminado. Ganador: {nombreGanador} con {maxPuntaje} puntos");
-
-        // Notificar a todos los clientes
-        NotificarGanadorClientRpc(ganadorId, nombreGanador, maxPuntaje, empate);
-    }
-
-    [ClientRpc]
-    private void NotificarGanadorClientRpc(ulong ganadorId, string nombreGanador, int puntaje, bool esEmpate)
-    {
-        if (esEmpate)
-        {
-            OnJuegoTerminado?.Invoke(0, "�EMPATE!", puntaje);
         }
         else
         {
-            OnJuegoTerminado?.Invoke(ganadorId, nombreGanador, puntaje);
+            nombreGanador = "¡EMPATE!";
         }
+
+        Debug.Log($"🏆 GANADOR: {nombreGanador} con {maxPuntaje} puntos");
+
+        // Notificar a todos los clientes
+        NotificarGanadorClientRpc(ganadorId, nombreGanador, maxPuntaje, hayEmpate);
     }
 
     /// <summary>
-    /// Reinicia todos los puntajes
+    /// Notifica el ganador a todos los clientes
+    /// </summary>
+    [ClientRpc]
+    private void NotificarGanadorClientRpc(ulong ganadorId, string nombre, int puntaje, bool empate)
+    {
+        if (empate)
+        {
+            OnJuegoTerminado?.Invoke(0, "¡EMPATE!", puntaje);
+        }
+        else
+        {
+            OnJuegoTerminado?.Invoke(ganadorId, nombre, puntaje);
+        }
+
+        Debug.Log($"🎊 [Cliente] Juego terminado - {nombre}: {puntaje} puntos");
+    }
+
+    /// <summary>
+    /// Reinicia todos los puntajes - SOLO EL SERVIDOR
     /// </summary>
     public void ReiniciarPuntajes()
     {
         if (!IsServer) return;
 
-        List<ulong> keys = new List<ulong>(puntajesLocales.Keys);
+        List<ulong> keys = new List<ulong>(puntajes.Keys);
         foreach (ulong key in keys)
         {
-            puntajesLocales[key] = 0;
+            puntajes[key] = 0;
             ActualizarPuntajeClientRpc(key, 0);
         }
 
-        Debug.Log("[ScoreSystem] Puntajes reiniciados");
+        Debug.Log("🔄 Puntajes reiniciados");
     }
 }

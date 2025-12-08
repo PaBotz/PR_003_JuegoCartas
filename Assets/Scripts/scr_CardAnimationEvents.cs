@@ -1,24 +1,26 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 /// <summary>
-/// Script auxiliar que se coloca en el objeto que tiene el Animator.
-/// Sirve como intermediario para que el Animation Event pueda
-/// notificar al MatchManager cuando termina la animaci�n de match.
-/// 
-/// IMPORTANTE: Coloca este script en el mismo GameObject que tiene el Animator.
+/// Script auxiliar para manejar Animation Events.
+/// Se coloca en el GameObject que tiene el Animator.
+/// Notifica al MatchManager cuando termina la animación de match.
 /// </summary>
 public class scr_CardAnimationEvents : MonoBehaviour
 {
     private scr_MatchManager matchManager;
 
-    void Start()
+    private void Start()
     {
         matchManager = FindFirstObjectByType<scr_MatchManager>();
+
+        if (matchManager == null)
+        {
+            Debug.LogWarning("⚠️ No se encontró MatchManager");
+        }
     }
 
     /// <summary>
-    /// Este m�todo es llamado por el Animation Event al final
-    /// de la animaci�n de "Match".
+    /// Llamado por Animation Event al final de la animación "Match"
     /// </summary>
     public void OnMatchAnimationEnd()
     {
@@ -30,10 +32,11 @@ public class scr_CardAnimationEvents : MonoBehaviour
         if (matchManager != null)
         {
             matchManager.EliminarCartasMatch();
+            Debug.Log("🎬 Animation Event: Notificado al MatchManager");
         }
         else
         {
-            Debug.LogError("[CardAnimationEvents] No se encontr� el MatchManager");
+            Debug.LogError("❌ [AnimationEvent] No se encontró MatchManager");
         }
     }
 }
