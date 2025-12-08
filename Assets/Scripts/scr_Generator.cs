@@ -1,28 +1,38 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Unity.Netcode;
 using UnityEngine;
 
+/// <summary>
+/// Genera el mapa de cartas y gestiona el mazo de sprites.
+/// Inicializa el MatchManager con el total de pares a encontrar.
+/// </summary>
 public class scr_Generator : NetworkBehaviour
 {
+    [Header("Configuración del Mapa")]
     public Transform[,] tilesTransform;
-    public Vector2 mapSize; // Tamaño por defecto
+    public Vector2 mapSize;
     public GameObject tile;
-    public float spacingX, spacingY;
+    public float spacingX = 2f;
+    public float spacingY = 2f;
 
-    [Header("Camara")]
+    [Header("Cámara")]
     public Camera mainCamera;
     public float paddingCamara = 50f;
 
+    [Header("Sprites")]
     public List<Sprite> sprites_Disponibles;
     public List<Sprite> mazo;
 
-    private bool partidaIniciada = false;
+    [Header("Referencias (Opcional - se buscan automáticamente)")]
+    [SerializeField] private GameObject uiManagerObject;
 
+    // Control de estado
+    private bool partidaIniciada = false;
     private Vector2 mapSizeTemporal;
 
-    // ✅ AÑADIR: Referencia al UIManager
-    private scr_UIManager uiManager;
+    // Referencias
+    private scr_MatchManager matchManager;
+    private scr_ScoreSystem scoreSystem;
 
     private void Start()
     {
@@ -32,19 +42,20 @@ public class scr_Generator : NetworkBehaviour
         }
 
         mapSizeTemporal = mapSize;
+        mazo = new List<Sprite>();
 
-        // ✅ AÑADIR: Buscar el UIManager
-        uiManager = FindFirstObjectByType<scr_UIManager>();
+        // Buscar referencias
+        matchManager = FindFirstObjectByType<scr_MatchManager>();
+        scoreSystem = FindFirstObjectByType<scr_ScoreSystem>();
     }
 
     private void Update()
     {
-        // ✅ Solo el host puede iniciar la partida
         if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsHost && !partidaIniciada)
         {
             if (Input.GetKeyDown(KeyCode.Return))
             {
-                Debug.Log("🎮 Iniciando partida...");
+                Debug.Log("[Generator] Iniciando partida...");
                 partidaIniciada = true;
                 IniciarPartida();
             }
@@ -55,52 +66,123 @@ public class scr_Generator : NetworkBehaviour
     {
         if (NetworkManager.Singleton.IsHost)
         {
-            Debug.Log("✔ Host iniciado → Esperando jugadores...");
-            Debug.Log("⌨️ Presiona ENTER cuando todos estén listos para generar el mapa");
+            Debug.Log("[Generator] Host iniciado → Esperando jugadores...");
+            Debug.Log("[Generator] Presiona ENTER cuando todos estén listos");
 
-            // ✅ NO generar nada aún, esperar a que presione ENTER
+            // Registrar al host en el sistema de puntaje
+            if (scoreSystem == null)
+            {
+                scoreSystem = FindFirstObjectByType<scr_ScoreSystem>();
+            }
+
+            if (scoreSystem != null)
+            {
+                scoreSystem.RegistrarJugador(NetworkManager.Singleton.LocalClientId);
+            }
         }
     }
 
     private void IniciarPartida()
     {
         mapSize = mapSizeTemporal;
-
         tilesTransform = new Transform[(int)mapSize.x, (int)mapSize.y];
 
-        generatorMap();
-        gestionDeLista();
-        centrarCamara();
+        // Generar el mapa y mazo
+        GenerarMazo();
+        GenerarMapa();
+        CentrarCamara();
 
-        Debug.Log($"✅ Mapa generado: {mapSize.x}x{mapSize.y}");
+        // Calcular total de pares e informar al MatchManager
+        int totalPares = (int)(mapSize.x * mapSize.y) / 2;
 
-        // ✅ Buscar UIManager si no lo tenemos
-        if (uiManager == null)
+        if (matchManager == null)
         {
-            uiManager = FindFirstObjectByType<scr_UIManager>();
+            matchManager = FindFirstObjectByType<scr_MatchManager>();
         }
 
-        if (uiManager != null)
+        if (matchManager != null)
         {
-            uiManager.OcultarConfigPanel();
+            matchManager.InicializarTotalPares(totalPares);
+        }
+
+        Debug.Log($"[Generator] Mapa generado: {mapSize.x}x{mapSize.y} ({totalPares} pares)");
+
+        // Ocultar panel de configuración usando SendMessage para evitar dependencia de tipo
+        OcultarUIConfig();
+
+        // Notificar a los clientes que la partida comenzó
+        NotificarInicioPartidaClientRpc();
+    }
+
+    private void OcultarUIConfig()
+    {
+        // Buscar el UIManager sin depender del tipo directamente
+        if (uiManagerObject != null)
+        {
+            uiManagerObject.SendMessage("OcultarConfigPanel", SendMessageOptions.DontRequireReceiver);
         }
         else
         {
-            Debug.LogWarning("⚠️ No se encontró el UIManager en la escena");
+            // Buscar por nombre si no está asignado
+            GameObject uiObj = GameObject.Find("UIManager");
+            if (uiObj != null)
+            {
+                uiObj.SendMessage("OcultarConfigPanel", SendMessageOptions.DontRequireReceiver);
+            }
         }
     }
 
-    // ✅ AÑADIR: Método público para cambiar el tamaño desde el UI
+    [ClientRpc]
+    private void NotificarInicioPartidaClientRpc()
+    {
+        Debug.Log("[Generator][Cliente] ¡Partida iniciada!");
+
+        // Notificar UI usando SendMessage
+        if (uiManagerObject != null)
+        {
+            uiManagerObject.SendMessage("MostrarPartidaIniciada", SendMessageOptions.DontRequireReceiver);
+        }
+        else
+        {
+            GameObject uiObj = GameObject.Find("UIManager");
+            if (uiObj != null)
+            {
+                uiObj.SendMessage("MostrarPartidaIniciada", SendMessageOptions.DontRequireReceiver);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Método público para cambiar el tamaño desde el UI
+    /// </summary>
     public void CambiarTamanoMapa(float ancho, float alto)
     {
         if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsHost && !partidaIniciada)
         {
             mapSizeTemporal = new Vector2(ancho, alto);
-            Debug.Log($"📐 Tamaño del mapa cambiado a: {ancho}x{alto}");
+            Debug.Log($"[Generator] Tamaño del mapa: {ancho}x{alto}");
         }
     }
 
-    private void generatorMap()
+    private void GenerarMazo()
+    {
+        mazo.Clear();
+
+        int espacioDisponible = (int)(mapSize.x * mapSize.y);
+        int cartasRequeridas = espacioDisponible / 2;
+        int max = Mathf.Min(sprites_Disponibles.Count, cartasRequeridas);
+
+        for (int i = 0; i < max; i++)
+        {
+            var carta = sprites_Disponibles[i];
+            mazo.Add(carta);
+            mazo.Add(carta); // Cada sprite se añade dos veces (par)
+        }
+
+        Debug.Log($"[Generator] Mazo creado con {mazo.Count} cartas ({max} pares)");
+    }
+
+    private void GenerarMapa()
     {
         float offsetX = ((mapSize.x - 1) * spacingX) / 2f;
         float offsetY = ((mapSize.y - 1) * spacingY) / 2f;
@@ -110,40 +192,31 @@ public class scr_Generator : NetworkBehaviour
             for (int y = 0; y < mapSize.y; y++)
             {
                 Vector2 tilePosition = new Vector2(
-                   (x * spacingX) - offsetX,
-                   (y * spacingY) - offsetY
+                    (x * spacingX) - offsetX,
+                    (y * spacingY) - offsetY
                 );
+
                 GameObject cloneCard = Instantiate(tile, tilePosition, Quaternion.identity);
 
-                // ✅ Spawnear en red - TODOS verán el MISMO objeto sincronizado
                 NetworkObject netObj = cloneCard.GetComponent<NetworkObject>();
-                netObj.Spawn();
+                if (netObj != null)
+                {
+                    netObj.Spawn();
+                }
 
                 tilesTransform[x, y] = cloneCard.transform;
             }
         }
     }
 
-    private void gestionDeLista()
+    private void CentrarCamara()
     {
-        int espacioDisponible = (int)(mapSize.x * mapSize.y);
-        int cartasRequeridas = espacioDisponible / 2;
-        int max = Mathf.Min(sprites_Disponibles.Count, cartasRequeridas);
-
-        for (int i = 0; i < max; i++)
+        if (mainCamera == null)
         {
-            var carta = sprites_Disponibles[i];
-            mazo.Add(carta);
-            mazo.Add(carta);
+            mainCamera = Camera.main;
         }
 
-        // ✅ NO necesitamos sincronizar el mazo
-        // Solo el servidor lo usa para asignar sprites
-    }
-
-    private void centrarCamara()
-    {
-        if (mainCamera == null) mainCamera = Camera.main;
+        if (mainCamera == null) return;
 
         Vector3 camaraPos = mainCamera.transform.position;
         camaraPos.x = 0;
@@ -159,8 +232,10 @@ public class scr_Generator : NetworkBehaviour
         mainCamera.orthographicSize = Mathf.Max(altoCamaraNecesario, anchoCamaraNecesario / aspectRatio);
     }
 
-    private void OnDestroy()
+    public override void OnDestroy()
     {
+        base.OnDestroy();
+
         if (NetworkManager.Singleton != null)
         {
             NetworkManager.Singleton.OnServerStarted -= OnHostStartedFuncion;

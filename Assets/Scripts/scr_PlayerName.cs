@@ -1,41 +1,66 @@
-using System; // Event Action: 
+using System;
 using TMPro;
 using Unity.Collections;
-using Unity.Netcode; // Para todo aquello que utilice network
+using Unity.Netcode;
 using UnityEngine;
-
 
 public class scr_PlayerName : NetworkBehaviour
 {
     [SerializeField] private TextMeshPro playerName;
-      
-    public NetworkVariable<FixedString32Bytes> networkPlayerName =  //NetworkVariable = Es una variable sincronizada automáticamente ente el servidor(host) y todos los clientes. tambien es una forma de sincronizar valores sin udar RPCs Manualmente
-    new NetworkVariable<FixedString32Bytes>("Default Name",         // FixedString32Bytes es simplemente un string limitado/fijo, lo cual es más seguro de enviar por red 
-    NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner); //Aquí indicamos quien puede leer el nombre de los demás y quien es el que tiene permisos para escribir el nombre                                
 
-
+    // NetworkVariable sincronizada automáticamente entre servidor y clientes
+    public NetworkVariable<FixedString32Bytes> networkPlayerName =
+        new NetworkVariable<FixedString32Bytes>("Default Name",
+        NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
 
     public event Action<string> OnNameChanged;
-
 
     public override void OnNetworkSpawn()
     {
         if (IsOwner)
         {
-            string inputName = FindFirstObjectByType<scr_UIManager>()
-                .nombreInputField.text;
-
-            networkPlayerName.Value = new FixedString32Bytes(inputName); 
-
-        } 
+            string inputName = ObtenerNombreDelInput();
+            networkPlayerName.Value = new FixedString32Bytes(inputName);
+        }
 
         playerName.text = networkPlayerName.Value.ToString();
-        networkPlayerName.OnValueChanged += NetworkPlayerName_OnValueChanged; //OnValueChanged = Se utiliza para escuchar cuando una variable de tipo NetworkVariable ha cambiado por alguno de los players
-                                                                              
+        networkPlayerName.OnValueChanged += NetworkPlayerName_OnValueChanged;
 
-        OnNameChanged?.Invoke(networkPlayerName.Value.ToString()); // ? = null-conditional operator: Lo que hace es activarse si onNameChanged no es null, si es null,pues no pasa nada; if (OnNameChanged != null)
-                                                                                                                                                                                           //OnNameChanged.Invoke(newValue);
+        OnNameChanged?.Invoke(networkPlayerName.Value.ToString());
+    }
 
+    /// <summary>
+    /// Obtiene el nombre del InputField sin depender directamente del tipo scr_UIManager
+    /// </summary>
+    private string ObtenerNombreDelInput()
+    {
+        // Buscar el UIManager por nombre
+        GameObject uiManagerObj = GameObject.Find("UIManager");
+
+        if (uiManagerObj != null)
+        {
+            // Buscar el InputField en los hijos del UIManager
+            TMP_InputField inputField = uiManagerObj.GetComponentInChildren<TMP_InputField>();
+
+            if (inputField != null && !string.IsNullOrEmpty(inputField.text))
+            {
+                return inputField.text;
+            }
+        }
+
+        // Fallback: buscar cualquier InputField con el tag o nombre específico
+        GameObject inputObj = GameObject.Find("NombreInputField");
+        if (inputObj != null)
+        {
+            TMP_InputField input = inputObj.GetComponent<TMP_InputField>();
+            if (input != null && !string.IsNullOrEmpty(input.text))
+            {
+                return input.text;
+            }
+        }
+
+        // Si no encuentra nada, usar nombre por defecto
+        return "Jugador " + OwnerClientId;
     }
 
     private void NetworkPlayerName_OnValueChanged(FixedString32Bytes previousValue, FixedString32Bytes newValue)
@@ -44,11 +69,8 @@ public class scr_PlayerName : NetworkBehaviour
         OnNameChanged?.Invoke(newValue.Value);
     }
 
-    public String GetPlayerName()
+    public string GetPlayerName()
     {
         return networkPlayerName.Value.ToString();
     }
-
- 
-
 }

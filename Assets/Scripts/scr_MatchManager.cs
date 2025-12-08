@@ -1,234 +1,304 @@
 using System.Collections;
 using System.Collections.Generic;
-using Unity.Jobs;
-using Unity.VisualScripting;
-using UnityEditor;
+using Unity.Netcode;
 using UnityEngine;
 
-public class scr_MatchManager : MonoBehaviour
+/// <summary>
+/// Gestiona las comparaciones de cartas, asigna puntos al jugador correcto,
+/// y detecta cuando termina la partida.
+/// </summary>
+public class scr_MatchManager : NetworkBehaviour
 {
-    //public List<Sprite> myList_spriteCards;//Lista que contendr� solo los sprites 
-    public List<GameObject> cartasHijoActivas_List; //Lista que contendr� las cartas front activa. Si alguna se desactiva la sacaremos de la lista
-    public List<scr_SpriteCard> scriptsCartas_List; //lo ponemos con los scripts para saltarnos el meter todo el tiempo el "GetComponent<scr_SpriteCard>()", osea, nos saltamos ese paso.
-  
-    public int paresEncontrados;
+    [Header("Listas de Control")]
+    public List<GameObject> cartasHijoActivas_List;
+    public List<scr_SpriteCard> scriptsCartas_List;
 
-
-    //AUN  NO LO USO
-    [Header("Configuracion de Tiempos")]
+    [Header("Configuración de Tiempos")]
     public float tiempoParaVerCartas = 1.5f;
-    private bool estaComparando = false; //Sirve como interruptor para saber si ya hay dos cartas en juego, si las hay, se empieza a comparar, por lo que ya no se pueden activar nuevas cartas
-    private scr_SpriteCard cartaEnEspera_01, cartaEnEspera_02; //Referencias de las cartas que estan esperando
 
-    //No necesitamos start() O Upadate() ya que estas funciones solo se ejecutan cuando se llaman desde afuera
+    [Header("Puntos por Match")]
+    [SerializeField] private int puntosPorMatch = 10;
 
+    // Control interno
+    private bool estaComparando = false;
+    private scr_SpriteCard cartaEnEspera_01, cartaEnEspera_02;
 
-    private void Update()
+    // Guardamos qué jugador activó cada carta
+    private ulong jugadorCarta_01;
+    private ulong jugadorCarta_02;
+
+    // Referencias
+    private scr_ScoreSystem scoreSystem;
+    private scr_Generator generator;
+
+    // Contadores sincronizados
+    private NetworkVariable<int> paresEncontradosNet = new NetworkVariable<int>(0);
+    private NetworkVariable<int> totalParesNet = new NetworkVariable<int>(0);
+
+    // Evento para cuando termina el juego
+    public System.Action OnPartidaTerminada;
+
+    private void Start()
     {
-      
+        cartasHijoActivas_List = new List<GameObject>();
+        scriptsCartas_List = new List<scr_SpriteCard>();
     }
 
-    public bool PuedeActivarCarta()//Estafuncion es llamada por la carta padre para saber si puede activar las siguientes cartas tras presionar la "U" o se espera.
+    public override void OnNetworkSpawn()
+    {
+        base.OnNetworkSpawn();
+
+        // Buscar referencias
+        scoreSystem = scr_ScoreSystem.Instance;
+        if (scoreSystem == null)
+        {
+            scoreSystem = FindFirstObjectByType<scr_ScoreSystem>();
+        }
+
+        generator = FindFirstObjectByType<scr_Generator>();
+
+        // Suscribirse a cambios en los pares encontrados
+        paresEncontradosNet.OnValueChanged += OnParesEncontradosCambiado;
+    }
+
+    public override void OnNetworkDespawn()
+    {
+        base.OnNetworkDespawn();
+        paresEncontradosNet.OnValueChanged -= OnParesEncontradosCambiado;
+    }
+
+    /// <summary>
+    /// El Generator llama esto cuando se crean las cartas para saber cuántos pares hay
+    /// </summary>
+    public void InicializarTotalPares(int total)
+    {
+        if (!IsServer) return;
+
+        totalParesNet.Value = total;
+        paresEncontradosNet.Value = 0;
+        Debug.Log($"[MatchManager] Total de pares a encontrar: {total}");
+    }
+
+    private void OnParesEncontradosCambiado(int anterior, int nuevo)
+    {
+        Debug.Log($"[MatchManager] Pares encontrados: {nuevo}/{totalParesNet.Value}");
+
+        // Verificar si terminó el juego
+        if (nuevo >= totalParesNet.Value && totalParesNet.Value > 0)
+        {
+            Debug.Log("[MatchManager] ¡Todos los pares encontrados!");
+            OnPartidaTerminada?.Invoke();
+
+            if (IsServer && scoreSystem != null)
+            {
+                scoreSystem.DeterminarGanador();
+            }
+        }
+    }
+
+    public bool PuedeActivarCarta()
     {
         if (estaComparando || cartasHijoActivas_List.Count >= 2)
         {
-            Debug.Log("No se puede activar carta: limite alcanzado o comparando");
+            Debug.Log("[MatchManager] No se puede activar carta: límite alcanzado o comparando");
             return false;
         }
         return true;
     }
 
-
-    public void RegistrarCartaActivada(GameObject spriteCard_Active)
+    /// <summary>
+    /// Registra una carta activada junto con el ID del jugador que la activó
+    /// </summary>
+    public void RegistrarCartaActivada(GameObject spriteCard_Active, ulong clientIdJugador)
     {
-        /*  if (estaComparando)
-          {
-              Debug.LogWarning("Ya hay una comparacion en proceso, espera...");
-              return;
-          }
+        if (!IsServer) return;
 
-          if (cartasHijoActivas_List.Count >= 2) //Con la funcion "PuedeActivarCarta()"  tanto este if como el anterior deber�an de quedar obsoletos, pues al no poderse activar la carta hijo, no deber�a agregarse nada a ninguna lista.
-          {
-              Debug.LogWarning("Ya hay 2 cartas activas, no se pueden activar mas");
-              return;
-          }
-        */
+        Debug.Log($"[MatchManager] Carta activada por jugador {clientIdJugador}. Total activas: {scriptsCartas_List.Count + 1}");
 
-        Debug.Log("el scriptsCartas_List.Count: " + scriptsCartas_List.Count);
-
-        // A�adir a las listas
         cartasHijoActivas_List.Add(spriteCard_Active);
-        scriptsCartas_List.Add(spriteCard_Active.GetComponent<scr_SpriteCard>());
+        scr_SpriteCard spriteScript = spriteCard_Active.GetComponent<scr_SpriteCard>();
+        scriptsCartas_List.Add(spriteScript);
 
-        Debug.Log("Carta activada. Total activas: " + cartasHijoActivas_List.Count);
-       
-        // Si hay 2 o mas cartas activadas, comparar
+        // Guardar quién activó esta carta (primera o segunda)
+        if (scriptsCartas_List.Count == 1)
+        {
+            jugadorCarta_01 = clientIdJugador;
+        }
+        else if (scriptsCartas_List.Count == 2)
+        {
+            jugadorCarta_02 = clientIdJugador;
+        }
+
+        // Si hay 2 cartas, comparar
         if (cartasHijoActivas_List.Count >= 2)
         {
             StartCoroutine(CompararCartas());
         }
     }
-    
-    private IEnumerator CompararCartas() //Se hace la comparacion de las cartas, si es match se activa una animacion en el animator y luego esa animacion activa la funcion de eliminar cartas match(),
-                                         //si no es match, se reinicia todo
+
+    private IEnumerator CompararCartas()
     {
         estaComparando = true;
 
-        Debug.Log("Comprobando matches...");
+        Debug.Log("[MatchManager] Comprobando matches...");
 
-        Sprite sprite_01 = scriptsCartas_List[0].ObtenerSprite(); //Referenciamos en una variable el sprite de las dos cartas abiertas.
-        Sprite sprite_02 = scriptsCartas_List[1].ObtenerSprite(); //A diferenciade la otra funcion de bucle doble donde teniamos todaas las cartas activas y habia que recorrerlas y compararlas todas.
-                                                                  //aqui solo tendremos en la lista las cartas activas, las cuales solo podr�n ser 2.
+        // Pequeña espera para que los sprites se sincronicen
+        yield return new WaitForSeconds(0.1f);
 
-        //Debug.Log($"Comparando: {sprite_01.name} con {sprite_02.name}"); // $ = Interpolacion de cadenas. Es lo mismo que poner "Debug.Log("Comparando: " + sprite1.name + " con " + sprite2.name);"
-                                                                         // Pero es m�s limpio a la vista, osea mas facil de leer
-        Debug.Log("Comparando: " + sprite_01 + " con " + sprite_02);
+        Sprite sprite_01 = scriptsCartas_List[0].ObtenerSprite();
+        Sprite sprite_02 = scriptsCartas_List[1].ObtenerSprite();
 
-        if (sprite_01 == sprite_02)
+        Debug.Log($"[MatchManager] Comparando: {(sprite_01 != null ? sprite_01.name : "null")} con {(sprite_02 != null ? sprite_02.name : "null")}");
+
+        if (sprite_01 != null && sprite_02 != null && sprite_01 == sprite_02)
         {
-            Debug.Log("MATCH ENCONTRADO!");
+            Debug.Log("[MatchManager] ¡MATCH ENCONTRADO!");
 
-            cartaEnEspera_01 = scriptsCartas_List[0];//Referenciamos los scripts de las cartas que tenemos en la lista
+            // Guardar referencias antes de limpiar las listas
+            cartaEnEspera_01 = scriptsCartas_List[0];
             cartaEnEspera_02 = scriptsCartas_List[1];
 
-            GameObject cartaPadre_01 = cartaEnEspera_01.transform.parent.gameObject; //Con esta linea le estamos pidiendo que nos de el gameobject del padre del objeto que tenga este script
-            GameObject cartaPadre_02 = cartaEnEspera_02.transform.parent.gameObject; //Lo hacemos con la intencion de ingresar a su animacion para desaparcer los pares
+            // Determinar quién se lleva los puntos
+            ulong jugadorGanadorPuntos = jugadorCarta_02;
 
-            Animator anim_01 = cartaPadre_01.GetComponent<Animator>();
-            Animator anim_02 = cartaPadre_02.GetComponent<Animator>();
-            /* if (anim1 != null)
-             {
-                 anim1.SetTrigger("Match");
-                 Debug.Log("Animaci�n activada en carta 1");
-             }
+            // Asignar puntos
+            if (scoreSystem != null)
+            {
+                scoreSystem.AgregarPuntos(jugadorGanadorPuntos, puntosPorMatch);
+                Debug.Log($"[MatchManager] Puntos asignados a jugador {jugadorGanadorPuntos}");
+            }
 
-             if (anim2 != null)
-             {
-                 anim2.SetTrigger("Match");
-                 Debug.Log("Animaci�n activada en carta 2");
-             }
-            */
+            // Buscar el objeto que tiene el Animator (subiendo por la jerarquía)
+            Animator anim_01 = BuscarAnimatorEnJerarquia(cartaEnEspera_01.transform);
+            Animator anim_02 = BuscarAnimatorEnJerarquia(cartaEnEspera_02.transform);
 
-            anim_01.SetTrigger("Match_Trigger");
-            anim_02.SetTrigger("Match_Trigger");
+            if (anim_01 != null) anim_01.SetTrigger("Match_Trigger");
+            if (anim_02 != null) anim_02.SetTrigger("Match_Trigger");
 
-
+            // Notificar match a los clientes para efectos visuales
+            NotificarMatchClientRpc(jugadorGanadorPuntos, puntosPorMatch);
         }
         else
         {
-            Debug.Log("NO son match. Mostrando cartas un momento...");
+            Debug.Log("[MatchManager] NO son match. Mostrando cartas un momento...");
+
             yield return new WaitForSeconds(tiempoParaVerCartas);
-            Debug.Log("Ocultando cartas...");
 
+            Debug.Log("[MatchManager] Ocultando cartas...");
+
+            // Guardar referencias antes de limpiar
             scr_SpriteCard script_01 = scriptsCartas_List[0];
-            scr_SpriteCard script_02 = scriptsCartas_List[1];  //Preguntar a chatGPT �No seria mejor hacer esto con las referencias que ya tenemos:  cartaEnEspera_01 y 02
-            GameObject hijo_01 = cartasHijoActivas_List[0];
-            GameObject hijo_02 = cartasHijoActivas_List[1];
+            scr_SpriteCard script_02 = scriptsCartas_List[1];
 
+            // Limpiar listas
             scriptsCartas_List.Clear();
             cartasHijoActivas_List.Clear();
 
-            hijo_01.SetActive(false);
-            hijo_02.SetActive(false);
+            // Buscar scr_Card subiendo por la jerarquía y usar sus métodos de red
+            scr_Card cardScript_01 = BuscarScriptCardEnJerarquia(script_01.transform);
+            scr_Card cardScript_02 = BuscarScriptCardEnJerarquia(script_02.transform);
 
-            hijo_01.transform.parent.GetComponent<scr_Card>().ResetCardActive();
-            hijo_02.transform.parent.GetComponent<scr_Card>().ResetCardActive();
-
-            /*GameObject cartaPadre_01 = cartaEnEspera_01.transform.parent.gameObject; //Con esta linea le estamos pidiendo que nos de el gameobject del padre del objeto que tenga este script
-            GameObject cartaPadre_02 = cartaEnEspera_02.transform.parent.gameObject; //Lo hacemos con la intencion de ingresar a su animacion para desaparcer los pares
-
-            cartaPadre_01.GetComponent<scr_Card>().card_Active = false;
-            cartaPadre_02.GetComponent<scr_Card>().card_Active = false;
-
-            Debug.Log("CartaPadre01: " + cartaPadre_01.GetComponent<scr_Card>().card_Active);
-            Debug.Log("CartaPadre02: " + cartaPadre_02.GetComponent<scr_Card>().card_Active); 
-            */
+            // Ocultar sprites y resetear cartas usando los métodos del padre
+            if (cardScript_01 != null) cardScript_01.OcultarSpriteEnRed();
+            if (cardScript_02 != null) cardScript_02.OcultarSpriteEnRed();
 
             estaComparando = false;
-            Debug.Log("Comparacion terminada. Listas limpiadas.");
-
-            
+            Debug.Log("[MatchManager] Comparación terminada. Listas limpiadas.");
         }
     }
-    
+
+    /// <summary>
+    /// Busca un Animator subiendo por la jerarquía del transform
+    /// </summary>
+    private Animator BuscarAnimatorEnJerarquia(Transform desde)
+    {
+        Transform actual = desde;
+        while (actual != null)
+        {
+            Animator anim = actual.GetComponent<Animator>();
+            if (anim != null) return anim;
+            actual = actual.parent;
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Busca scr_Card subiendo por la jerarquía del transform
+    /// </summary>
+    private scr_Card BuscarScriptCardEnJerarquia(Transform desde)
+    {
+        Transform actual = desde;
+        while (actual != null)
+        {
+            scr_Card card = actual.GetComponent<scr_Card>();
+            if (card != null) return card;
+            actual = actual.parent;
+        }
+        return null;
+    }
+
+    [ClientRpc]
+    private void NotificarMatchClientRpc(ulong jugadorId, int puntos)
+    {
+        Debug.Log($"[MatchManager][Cliente] Match! Jugador {jugadorId} ganó {puntos} puntos");
+        // Aquí podrías añadir efectos de sonido o partículas
+    }
+
+    /// <summary>
+    /// Llamado por Animation Event cuando termina la animación de match
+    /// </summary>
     public void EliminarCartasMatch()
     {
-        Debug.Log("Animation Event: Eliminando cartas con match");
+        if (!IsServer) return;
 
+        Debug.Log("[MatchManager] Animation Event: Eliminando cartas con match");
+
+        // Limpiar listas
         scriptsCartas_List.Clear();
         cartasHijoActivas_List.Clear();
 
-        cartaEnEspera_01.DesactivarPadre();
-        cartaEnEspera_02.DesactivarPadre();
+        // Desactivar las cartas usando scr_Card
+        if (cartaEnEspera_01 != null)
+        {
+            scr_Card card_01 = BuscarScriptCardEnJerarquia(cartaEnEspera_01.transform);
+            if (card_01 != null) card_01.DesactivarCartaCompleta();
+        }
 
-        paresEncontrados++;
-        Debug.Log("Pares encontrados total: " + paresEncontrados);
+        if (cartaEnEspera_02 != null)
+        {
+            scr_Card card_02 = BuscarScriptCardEnJerarquia(cartaEnEspera_02.transform);
+            if (card_02 != null) card_02.DesactivarCartaCompleta();
+        }
 
+        // Incrementar contador de pares (esto dispara la verificación de fin de juego)
+        paresEncontradosNet.Value++;
+
+        // Limpiar referencias
         cartaEnEspera_01 = null;
         cartaEnEspera_02 = null;
 
         estaComparando = false;
-        Debug.Log("Eliminaci�n completada. Sistema listo para nuevas cartas.");
+        Debug.Log("[MatchManager] Eliminación completada. Sistema listo para nuevas cartas.");
     }
 
-    #region ReiniciarContado
-    //Aun no se para que es
-    public void ReiniciarContador() //Por si algo
+    /// <summary>
+    /// Reinicia todo el sistema para una nueva partida
+    /// </summary>
+    public void ReiniciarPartida()
     {
+        if (!IsServer) return;
+
         cartasHijoActivas_List.Clear();
         scriptsCartas_List.Clear();
-        paresEncontrados = 0;
+        paresEncontradosNet.Value = 0;
         estaComparando = false;
         cartaEnEspera_01 = null;
         cartaEnEspera_02 = null;
+
+        Debug.Log("[MatchManager] Sistema reiniciado para nueva partida");
     }
-    #endregion
 
-    #region MatchAnterior
-    /* private void ComprobarMatches()
-     {
-
-         Debug.Log("Comprobando matches...");
-
-         // Comparar todas las cartas activadas entre s�
-         for (int i = 0; i < scriptsCartas_List.Count; i++)
-         {
-             for (int j = i + 1; j < scriptsCartas_List.Count; j++)//Este doble for sirve para cpmparar todos los objetos dentro de la lista por si mismos, coge i y lo compara por todos los j�s
-             {
-
-                 if (scriptsCartas_List[i].ObtenerSprite() == scriptsCartas_List[j].ObtenerSprite()) //Compara los sprites de cada carta entre ellos
-                 {
-                     Debug.Log("�MATCH ENCONTRADO!");
-
-                     //Desactivacion
-                     scr_SpriteCard script_01 = scriptsCartas_List[i];
-                     scr_SpriteCard script_02 = scriptsCartas_List[j];
-
-
-                     //Remover de los lists
-                     scriptsCartas_List.RemoveAt(j);
-                     scriptsCartas_List.RemoveAt(i);
-                     cartasHijoActivas_List.RemoveAt(j);
-                     cartasHijoActivas_List.RemoveAt(i);
-
-                     script_01.DesactivarPadre();
-                     script_02.DesactivarPadre();
-
-                     paresEncontrados++;
-                     Debug.Log("Pares encontrados: " + paresEncontrados);
-
-                     // Volver a comprobar por si hay m�s matches
-                     if (cartasHijoActivas_List.Count >= 2)
-                     {
-                         ComprobarMatches();
-                     }
-
-                     return; // Salir despu�s de encontrar un match
-                 }
-
-             }
-         }
-     }*/
-    #endregion
-
+    // Getters públicos para UI
+    public int ObtenerParesEncontrados() => paresEncontradosNet.Value;
+    public int ObtenerTotalPares() => totalParesNet.Value;
 }

@@ -1,17 +1,30 @@
-﻿using UnityEngine;
-using Unity.Netcode;
+﻿using Unity.Netcode;
+using UnityEngine;
 
+/// <summary>
+/// Control de la carta. Maneja colisiones con jugadores, activación de cartas,
+/// y toda la sincronización de red (incluyendo la del hijo SpriteCard).
+/// Este es el ÚNICO NetworkObject de la carta.
+/// </summary>
 public class scr_Card : NetworkBehaviour
 {
-    private GameObject Player;
-    public scr_PlayerMovements my_scrPlayer;
-
+    [Header("Referencias")]
     [SerializeField] private GameObject SpriteCard;
     [SerializeField] private scr_SpriteCard myscr_SpriteCard;
+
+    [Header("Referencias Externas (se buscan automáticamente)")]
     [SerializeField] private GameObject myMatchManager;
-    [SerializeField] private scr_MatchManager myscr_MatchManager;
-    [Header("PRUEBA")]
-    public bool card_Collision, card_Active;
+    private scr_MatchManager myscr_MatchManager;
+
+    [Header("Estado")]
+    public bool card_Collision;
+    public bool card_Active;
+
+    // Variable de red para sincronizar el estado activo
+    private NetworkVariable<bool> cardActiveNet = new NetworkVariable<bool>(false);
+
+    // Variable de red para sincronizar el índice del sprite
+    private NetworkVariable<int> spriteIndexNet = new NetworkVariable<int>(-1);
 
     void Start()
     {
@@ -24,20 +37,56 @@ public class scr_Card : NetworkBehaviour
     {
         base.OnNetworkSpawn();
 
-        // ✅ Asegurarse de que las referencias estén inicializadas
         if (myscr_SpriteCard == null)
         {
             InicializarReferencias();
         }
 
-        // ✅ Ahora sí ocultar el sprite
+        // Ocultar sprite al inicio
         if (myscr_SpriteCard != null)
         {
             myscr_SpriteCard.OcultarSprite();
         }
+
+        // Suscribirse a cambios de estado
+        cardActiveNet.OnValueChanged += OnCardActiveChanged;
+        spriteIndexNet.OnValueChanged += OnSpriteIndexChanged;
+
+        // Si ya tiene un sprite asignado (reconexión), aplicarlo
+        if (spriteIndexNet.Value >= 0)
+        {
+            myscr_SpriteCard?.AplicarSprite(spriteIndexNet.Value);
+        }
     }
 
-    // ✅ NUEVO: Método para inicializar referencias
+    public override void OnNetworkDespawn()
+    {
+        base.OnNetworkDespawn();
+        cardActiveNet.OnValueChanged -= OnCardActiveChanged;
+        spriteIndexNet.OnValueChanged -= OnSpriteIndexChanged;
+    }
+
+    private void OnCardActiveChanged(bool anterior, bool nuevo)
+    {
+        card_Active = nuevo;
+
+        if (myscr_SpriteCard != null)
+        {
+            if (nuevo)
+                myscr_SpriteCard.MostrarSprite();
+            else
+                myscr_SpriteCard.OcultarSprite();
+        }
+    }
+
+    private void OnSpriteIndexChanged(int anterior, int nuevo)
+    {
+        if (nuevo >= 0 && myscr_SpriteCard != null)
+        {
+            myscr_SpriteCard.AplicarSprite(nuevo);
+        }
+    }
+
     private void InicializarReferencias()
     {
         if (myMatchManager == null)
@@ -45,14 +94,17 @@ public class scr_Card : NetworkBehaviour
             myMatchManager = GameObject.Find("MatchManager");
         }
 
-        if (my_scrPlayer == null)
+        if (myscr_SpriteCard == null)
         {
-            my_scrPlayer = GetComponent<scr_PlayerMovements>();
-        }
-
-        if (myscr_SpriteCard == null && SpriteCard != null)
-        {
-            myscr_SpriteCard = SpriteCard.GetComponent<scr_SpriteCard>();
+            // Buscar en hijos si no está asignado
+            if (SpriteCard != null)
+            {
+                myscr_SpriteCard = SpriteCard.GetComponent<scr_SpriteCard>();
+            }
+            else
+            {
+                myscr_SpriteCard = GetComponentInChildren<scr_SpriteCard>();
+            }
         }
 
         if (myscr_MatchManager == null && myMatchManager != null)
@@ -72,40 +124,118 @@ public class scr_Card : NetworkBehaviour
 
         if (Input.GetKeyDown(KeyCode.U) && card_Collision && !card_Active)
         {
-            if (!myscr_MatchManager.PuedeActivarCarta())
-            {
-                Debug.Log("No se puede activar más cartas en este momento");
-                return;
-            }
-
-            ActivarCartaServerRpc();
+            SolicitarActivacionServerRpc();
         }
     }
 
     [Rpc(SendTo.Server)]
-    void ActivarCartaServerRpc()
+    private void SolicitarActivacionServerRpc(RpcParams rpcParams = default)
     {
-        Debug.Log("Estoy active");
-        MostrarCartaClientRpc();
-        myscr_SpriteCard.CartaActivada();
+        ulong clientIdJugador = rpcParams.Receive.SenderClientId;
+
+        if (myscr_MatchManager == null)
+        {
+            InicializarReferencias();
+        }
+
+        if (myscr_MatchManager != null && !myscr_MatchManager.PuedeActivarCarta())
+        {
+            Debug.Log($"[Card] Jugador {clientIdJugador} no puede activar carta en este momento");
+            return;
+        }
+
+        if (cardActiveNet.Value)
+        {
+            Debug.Log("[Card] La carta ya está activa");
+            return;
+        }
+
+        Debug.Log($"[Card] Carta activada por jugador {clientIdJugador}");
+
+        // Marcar como activa (esto sincroniza a todos los clientes)
+        cardActiveNet.Value = true;
+
+        // Activar la carta en el SpriteCard (esto asigna sprite si no tiene)
+        if (myscr_SpriteCard != null)
+        {
+            myscr_SpriteCard.CartaActivada(clientIdJugador);
+        }
+    }
+
+    /// <summary>
+    /// Llamado por SpriteCard para sincronizar el índice del sprite a todos los clientes
+    /// </summary>
+    public void SincronizarSpriteIndex(int indice)
+    {
+        if (!IsServer) return;
+
+        spriteIndexNet.Value = indice;
+    }
+
+    /// <summary>
+    /// Resetea el estado de la carta. Solo el servidor puede llamar esto.
+    /// </summary>
+    public void ResetCardActiveRed()
+    {
+        if (!IsServer) return;
+
+        cardActiveNet.Value = false;
+    }
+
+    /// <summary>
+    /// Desactiva toda la carta (el objeto raíz). Solo servidor.
+    /// </summary>
+    public void DesactivarCartaCompleta()
+    {
+        if (!IsServer) return;
+
+        DesactivarCartaClientRpc();
     }
 
     [ClientRpc]
-    void MostrarCartaClientRpc()
+    private void DesactivarCartaClientRpc()
     {
-        // ✅ CAMBIO: Mostrar el sprite en vez de activar el GameObject
-        myscr_SpriteCard.MostrarSprite();
-        card_Active = true;
+        // Buscar el objeto raíz subiendo por la jerarquía
+        Transform raiz = transform;
+        while (raiz.parent != null)
+        {
+            raiz = raiz.parent;
+        }
+        raiz.gameObject.SetActive(false);
     }
 
-    void eliminarMatchCartas_MatchManager()
+    /// <summary>
+    /// Oculta el sprite en todos los clientes (para cuando no hay match)
+    /// </summary>
+    public void OcultarSpriteEnRed()
     {
-        myscr_MatchManager.EliminarCartasMatch();
+        if (!IsServer) return;
+
+        cardActiveNet.Value = false;
+        OcultarSpriteClientRpc();
     }
 
+    [ClientRpc]
+    private void OcultarSpriteClientRpc()
+    {
+        if (myscr_SpriteCard != null)
+        {
+            myscr_SpriteCard.OcultarSprite();
+        }
+        card_Active = false;
+    }
+
+    // Método legacy para compatibilidad
     public void ResetCardActive()
     {
-        card_Active = false;
+        if (IsServer)
+        {
+            ResetCardActiveRed();
+        }
+        else
+        {
+            card_Active = false;
+        }
     }
 
     private void OnTriggerEnter2D(Collider2D collision)
@@ -114,7 +244,6 @@ public class scr_Card : NetworkBehaviour
 
         if (collision.gameObject.CompareTag("Player"))
         {
-            Debug.Log("Collision 2D");
             card_Collision = true;
         }
     }
@@ -125,10 +254,7 @@ public class scr_Card : NetworkBehaviour
 
         if (collision.gameObject.CompareTag("Player"))
         {
-            Debug.Log("Collision 2D");
             card_Collision = false;
         }
-
-
     }
 }
